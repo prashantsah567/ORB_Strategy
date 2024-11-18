@@ -127,7 +127,9 @@ def process_trading_day(date):
                 continue
 
             entry_time = entry_data.index[0]
-            entry_price = data.loc[entry_time]['close']
+            entry_price = data.loc[entry_time,'close']
+            if isinstance (entry_price, pd.Series):
+                entry_price = entry_price.iloc[0]
 
             #calculate stop loss for long or short
             stop_loss = calculate_stop_loss(entry_price, atr_values[ticker], position)
@@ -141,6 +143,12 @@ def process_trading_day(date):
 
             for timestamp, row in entry_data.iterrows():
                 current_price = row['close']
+                
+                if isinstance(current_price, pd.Series):
+                    current_price = current_price.iloc[0] #handle ambiguity
+
+                #additional print statement
+                print(f"Processing {ticker} at {timestamp}: current_price={current_price}, stop_loss={stop_loss}")
 
                 if position == 'long' and current_price <= stop_loss:
                     exit_time = timestamp
@@ -178,6 +186,7 @@ def get_unique_dates(file_path):
     unique_dates = df['date'].dt.date.unique()
     return sorted(unique_dates) #sort before returning
 
+'''
 # Example usage
 if __name__ == "__main__":
 
@@ -189,3 +198,16 @@ if __name__ == "__main__":
 
         trading_date_str = trading_date.strftime('%Y-%m-%d')
         positions = process_trading_day(trading_date_str)
+'''
+
+if __name__ == "__main__":
+    positions = process_trading_day('2023-03-02')
+
+
+'''
+1. ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+at if position == 'long' and current_price <= stop_loss: at 2023-03-02 09:36:00-05:00    173.29
+2. why loading historical_data is taking too long, can't it be done just by going to that folder
+3. Calculate all the values, check if it can be done from the log file or not
+4. Tweak various parameters to find max result
+'''
