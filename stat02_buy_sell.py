@@ -27,11 +27,14 @@ other calculations:
 import pandas as pd # type: ignore
 from datetime import datetime
 import os
+import time
+import pytz
 
 #constants
 CAPITAL = 25000
 TOP_STOCKS_FILE = 'top_daily_stocks.csv'
 HISTORICAL_DATA_FOLDER = 'historical_data'
+PROCESSED_DATA_FOLDER = 'processed_data'
 STOP_LOSS_PERCENTAGE = 0.10 #10%
 LOG_FILE = 'trade_log.csv'
 
@@ -45,6 +48,7 @@ def get_tickers_for_date(date):
     return tickers, atr_values
 
 # load historical data for selected tickers
+'''
 def load_historical_data(tickers):
     data = {}
     for ticker in tickers:
@@ -57,12 +61,32 @@ def load_historical_data(tickers):
             print(f'Historical data not found for ticker: {ticker}')
 
     return data
+'''
+
+#new loading function based on processed parquet files
+def load_historical_data(tickers):
+    data = {}
+    for ticker in tickers:
+        file_path = f'{PROCESSED_DATA_FOLDER}/{ticker}.parquet'
+        try:
+            # Load preprocessed Parquet file
+            df = pd.read_parquet(file_path)
+            data[ticker] = df
+        except FileNotFoundError:
+            print(f'Processed data not found for ticker: {ticker}')
+        except Exception as e:
+            print(f"Error loading data for {ticker}: {e}")
+
+    return data
 
 #check price movement between 9:31 AM and 9:35 AM
-def check_price_movement(data):
-    # Define the start and end time for the filter
-    start_time = pd.Timestamp('2023-01-10 09:30:00-05:00')
-    end_time = pd.Timestamp('2023-01-10 09:35:00-05:00')
+def check_price_movement(data, date):
+    # Define the US/Eastern timezone using pytz
+    eastern = pytz.timezone('US/Eastern')
+    
+    # Construct the start and end times dynamically based on the date
+    start_time = pd.Timestamp(f"{date} 09:30:00").tz_localize(eastern, ambiguous='NaT')
+    end_time = pd.Timestamp(f"{date} 09:35:00").tz_localize(eastern, ambiguous='NaT')
 
     data_filtered = data.loc[start_time:end_time]
 
@@ -108,18 +132,27 @@ def process_trading_day(date):
     tickers, atr_values = get_tickers_for_date(date)
     print(f'Tickers for {date}: {tickers}')
 
+    time_start = time.time()
     #load historical 1-min data for the ticker
     historical_data = load_historical_data(tickers)
+    print(f"total time taken to load historical data is: {time.time() - time_start}")
 
+    time_start = time.time()
     positions = [] #to store open positions for the day
     #check price movement for each ticker
     for ticker, data in historical_data.items():
         print(f"Analyzing {ticker}...")
-        position = check_price_movement(data)
+        position = check_price_movement(data, date)
 
         if position != 'no_trade':
-            start_time = pd.Timestamp(f"{date} 09:36:00-05:00")
-            end_time = pd.Timestamp(f"{date} 15:56:00-05:00")
+            #start_time = pd.Timestamp(f"{date} 09:36:00-05:00")
+            #end_time = pd.Timestamp(f"{date} 15:56:00-05:00")
+
+            # Define the US/Eastern timezone using pytz
+            eastern = pytz.timezone('US/Eastern')
+            # Construct the start and end times dynamically based on the date
+            start_time = pd.Timestamp(f"{date} 09:36:00").tz_localize(eastern, ambiguous='NaT')
+            end_time = pd.Timestamp(f"{date} 15:56:00").tz_localize(eastern, ambiguous='NaT')
 
             entry_data = data[(data.index >= start_time) & (data.index <= end_time)]
 
@@ -148,7 +181,7 @@ def process_trading_day(date):
                     current_price = current_price.iloc[0] #handle ambiguity
 
                 #additional print statement
-                print(f"Processing {ticker} at {timestamp}: current_price={current_price}, stop_loss={stop_loss}")
+                #print(f"Processing {ticker} at {timestamp}: current_price={current_price}, stop_loss={stop_loss}")
 
                 if position == 'long' and current_price <= stop_loss:
                     exit_time = timestamp
@@ -178,6 +211,8 @@ def process_trading_day(date):
                 'closing_price': exit_price
             })
 
+    print(f"Time taken to run rest of the code and function after data is loaded: {time.time() - time_start}")
+
     return positions
 
 #get each trading days from the top_daily_stocks.csv file
@@ -186,8 +221,6 @@ def get_unique_dates(file_path):
     unique_dates = df['date'].dt.date.unique()
     return sorted(unique_dates) #sort before returning
 
-'''
-# Example usage
 if __name__ == "__main__":
 
     unique_date = get_unique_dates(TOP_STOCKS_FILE)
@@ -198,11 +231,12 @@ if __name__ == "__main__":
 
         trading_date_str = trading_date.strftime('%Y-%m-%d')
         positions = process_trading_day(trading_date_str)
+
+# Example usage - for quick test on a certain date
 '''
-
 if __name__ == "__main__":
-    positions = process_trading_day('2023-03-02')
-
+    positions = process_trading_day('2023-03-13')
+'''
 
 '''
 1. ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
