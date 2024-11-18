@@ -1,4 +1,5 @@
-'''start the trading strategy here'''
+'''start the trading strategy here and log all the result into a log file'''
+
 '''
 This is for backtesting. Trading session is from 9:30 to 16:00, so make sure you starting and ending between these time. Also ignore any comments:
 
@@ -35,7 +36,7 @@ CAPITAL = 25000
 TOP_STOCKS_FILE = 'top_daily_stocks.csv'
 HISTORICAL_DATA_FOLDER = 'historical_data'
 PROCESSED_DATA_FOLDER = 'processed_data'
-STOP_LOSS_PERCENTAGE = 0.10 #10%
+STOP_LOSS_PERCENTAGE = 10 #10%
 LOG_FILE = 'trade_log.csv'
 
 #helper function to get tickers for a given date
@@ -85,7 +86,7 @@ def check_price_movement(data, date):
     eastern = pytz.timezone('US/Eastern')
     
     # Construct the start and end times dynamically based on the date
-    start_time = pd.Timestamp(f"{date} 09:31:00").tz_localize(eastern, ambiguous='NaT')
+    start_time = pd.Timestamp(f"{date} 09:30:00").tz_localize(eastern, ambiguous='NaT')
     end_time = pd.Timestamp(f"{date} 09:35:00").tz_localize(eastern, ambiguous='NaT')
     
     try:
@@ -97,7 +98,7 @@ def check_price_movement(data, date):
     #count how many of the 5 candles had close > open
     positive_movement = sum(data_filtered['close'] > data_filtered['open'])
 
-    if positive_movement >= 4:
+    if positive_movement >= 5:
         return 'long'
     elif positive_movement <=1:
         return 'short'
@@ -156,7 +157,14 @@ def process_trading_day(date):
             eastern = pytz.timezone('US/Eastern')
             # Construct the start and end times dynamically based on the date
             start_time = pd.Timestamp(f"{date} 09:36:00").tz_localize(eastern, ambiguous='NaT')
-            end_time = pd.Timestamp(f"{date} 15:56:00").tz_localize(eastern, ambiguous='NaT')
+
+            #checking for half day
+            half_days = ['2022-07-03', '2023-07-03', '2023-11-24', '2024-07-03']
+
+            if date in half_days:
+                end_time = pd.Timestamp(f"{date} 13:00:00").tz_localize(eastern, ambiguous='NaT')
+            else:
+                end_time = pd.Timestamp(f"{date} 15:56:00").tz_localize(eastern, ambiguous='NaT')
 
             entry_data = data[(data.index >= start_time) & (data.index <= end_time)]
 
@@ -239,7 +247,7 @@ if __name__ == "__main__":
 # Example usage - for quick test on a certain date
 
 # if __name__ == "__main__":
-#     positions = process_trading_day('2022-12-16')
+#     positions = process_trading_day('2023-07-03')
 
 '''
 1. ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().

@@ -1,11 +1,14 @@
+'''
+This file is to process all the historical data files and get the top trading stocks for each day
+'''
 import os
 import pandas as pd # type: ignore
 from datetime import datetime
 
 #constants
 MIN_OPEN_PRICE = 5.0
-MIN_AVG_VOLUME = 5000 #lowering the volume (from 1_000_000) to see more result
-MIN_ATR = 0.20 #lowering the ATR (from 0.5) to see more results
+MIN_AVG_VOLUME = 10000 #lowering the volume (from 1_000_000) to see more result
+MIN_ATR = 0.30 #lowering the ATR (from 0.5) to see more results
 MIN_RELATIVE_VOLUME = 2.0
 TOP_STOCKS_COUNT = 20
 

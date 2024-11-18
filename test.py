@@ -1,4 +1,5 @@
 import pandas as pd # type: ignore
+import os
 
 '''
 start_date = '2022-11-28'
@@ -16,12 +17,27 @@ if start_timestamp < end_timestamp:
 #df = df[(df['timestamp'] >= start_timestamp) & (df['timestamp'] <= end_timestamp)]
 '''
 
-#to check how many times a value is repeated
-df = pd.read_csv('top_daily_stocks.csv')
-tickers_count = df['ticker'].value_counts()
+# #to check how many times a value is repeated
+# df = pd.read_csv('top_daily_stocks.csv')
+# tickers_count = df['ticker'].value_counts()
 
-print(tickers_count)
-print(f'\n{tickers_count.sum()}')
+# print(tickers_count)
+# print(f'\n{tickers_count.sum()}')
+
+#raw_file_path = os.path.join('historical_data', 'TSLA_1_min_data.csv')
+processed_file_path = os.path.join('processed_data', "TSLA.parquet")
+
+try:
+    # Load raw CSV and preprocess
+    df = pd.read_csv('historical_data/TSLA_1_min_data.csv', parse_dates=['timestamp'])
+    df.set_index('timestamp', inplace=True)
+
+    # Save in Parquet format
+    df.to_parquet(processed_file_path)
+    print(f"Processed and saved: TSLA")
+except Exception as e:
+    print(f"Error processing TSLA file: {e}")
+
 
 """
 META    351
