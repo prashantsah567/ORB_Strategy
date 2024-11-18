@@ -85,10 +85,14 @@ def check_price_movement(data, date):
     eastern = pytz.timezone('US/Eastern')
     
     # Construct the start and end times dynamically based on the date
-    start_time = pd.Timestamp(f"{date} 09:30:00").tz_localize(eastern, ambiguous='NaT')
+    start_time = pd.Timestamp(f"{date} 09:31:00").tz_localize(eastern, ambiguous='NaT')
     end_time = pd.Timestamp(f"{date} 09:35:00").tz_localize(eastern, ambiguous='NaT')
-
-    data_filtered = data.loc[start_time:end_time]
+    
+    try:
+        data_filtered = data.loc[start_time:end_time]
+    except KeyError as e:
+        print(f"Missing data for the range {start_time} to {end_time}.") #for any missing timestamp
+        return 'no_trade'
 
     #count how many of the 5 candles had close > open
     positive_movement = sum(data_filtered['close'] > data_filtered['open'])
@@ -233,10 +237,9 @@ if __name__ == "__main__":
         positions = process_trading_day(trading_date_str)
 
 # Example usage - for quick test on a certain date
-'''
-if __name__ == "__main__":
-    positions = process_trading_day('2023-03-13')
-'''
+
+# if __name__ == "__main__":
+#     positions = process_trading_day('2022-12-16')
 
 '''
 1. ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
