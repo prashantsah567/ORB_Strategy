@@ -21,7 +21,7 @@ end_date = '2024-11-05'
 
 #load and filter data
 def load_filtered_data(file_path):
-    df = pd.read_csv(file_path, parse_dates=['timestamp'])
+    df = pd.read_parquet(file_path, parse_dates=['timestamp'])
 
     #convert start and end timestamp with date and time to timestamp object
     start_timestamp = pd.Timestamp(f"{start_date} 09:30:00-05:00")
@@ -62,8 +62,8 @@ def find_top_stocks(data_folder):
 
     for filename in os.listdir(data_folder):
         print(f"Processing file----------------------------------------------->: {filename}")
-        if filename.endswith("_1_min_data.csv"):
-            ticker = filename.split("_")[0]
+        if filename.endswith(".parquet"):
+            ticker = filename.split(".")[0]
             file_path = os.path.join(data_folder, filename)
 
             df = load_filtered_data(file_path)
@@ -75,7 +75,7 @@ def find_top_stocks(data_folder):
             # print(df.head)
 
             daily_stocks = select_top_stocks(df, ticker)
-            print(f"\nAfter applying filter and selecting top stocks-------{daily_stocks.shape}\n")
+            print(f"\nAfter applying filter and selecting top stocks-------{daily_stocks.shape}---------------\n")
             print(daily_stocks.head)
 
             all_stocks = pd.concat([all_stocks, daily_stocks], ignore_index=True)
