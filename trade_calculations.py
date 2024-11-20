@@ -9,7 +9,7 @@ output_file = "logs/final_metrics.csv"  # Path to save final results
 trade_details_file = "logs/trade_details.csv" #file for detailed trade data
 
 # Initialize variables
-starting_capital = 25000
+starting_capital = 100000
 capital = starting_capital
 risk_free_rate = 0.03  # Example risk-free rate (adjust if needed)
 daily_returns = []  # To track daily returns
@@ -71,15 +71,10 @@ for date, daily_data in log_df.groupby('date'):
         borrow_fee = 0.005 * capital_per_stock if position_type == "short" else 0
 
         # Calculate profit/loss
-        trade_profit = (
-            (close_price - open_price) * shares
-            - 2 * commission  # Buy and sell commission
-            - borrow_fee      # Borrow fee for shorts
-        ) if position_type == "long" else (
-            (open_price - close_price) * shares
-            - 2 * commission
-            - borrow_fee
-        )
+        if position_type == "long":
+            trade_profit = ((close_price - open_price) * shares - 2 * commission - borrow_fee)
+        else: 
+            trade_profit = ((open_price - close_price) * shares - 2 * commission - borrow_fee)
 
         # Update capital and returns
         capital += trade_profit

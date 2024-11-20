@@ -32,7 +32,6 @@ import time
 import pytz
 
 #constants
-CAPITAL = 25000
 TOP_STOCKS_FILE = 'top_daily_stocks.csv'
 HISTORICAL_DATA_FOLDER = 'historical_data'
 PROCESSED_DATA_FOLDER = 'processed_data'
@@ -87,7 +86,7 @@ def check_price_movement(data, date):
     
     # Construct the start and end times dynamically based on the date
     start_time = pd.Timestamp(f"{date} 09:30:00").tz_localize(eastern, ambiguous='NaT')
-    end_time = pd.Timestamp(f"{date} 09:35:00").tz_localize(eastern, ambiguous='NaT')
+    end_time = pd.Timestamp(f"{date} 09:39:00").tz_localize(eastern, ambiguous='NaT')
     
     try:
         data_filtered = data.loc[start_time:end_time]
@@ -98,9 +97,9 @@ def check_price_movement(data, date):
     #count how many of the 5 candles had close > open
     positive_movement = sum(data_filtered['close'] > data_filtered['open'])
 
-    if positive_movement >= 5:
+    if positive_movement >= 8:
         return 'long'
-    elif positive_movement <=1:
+    elif positive_movement <= 2:
         return 'short'
     else:
         return 'no_trade'
@@ -156,7 +155,7 @@ def process_trading_day(date):
             # Define the US/Eastern timezone using pytz
             eastern = pytz.timezone('US/Eastern')
             # Construct the start and end times dynamically based on the date
-            start_time = pd.Timestamp(f"{date} 09:36:00").tz_localize(eastern, ambiguous='NaT')
+            start_time = pd.Timestamp(f"{date} 09:39:00").tz_localize(eastern, ambiguous='NaT')
 
             #checking for half day
             half_days = ['2022-07-03', '2023-07-03', '2023-11-24', '2024-07-03']
@@ -186,6 +185,13 @@ def process_trading_day(date):
             exit_time = None
             exit_price = None
 
+            # #start: for setting the check interval to 5-minutes
+            # entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
+            # '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
+            # entry_data_resampled_for_5_min = entry_data.resample('15T', on='timestamp').agg({'close': 'last'}).dropna()
+            # #end: for the 5-minute check code
+
+            #for timestamp, row in entry_data.iterrows():
             for timestamp, row in entry_data.iterrows():
                 current_price = row['close']
                 

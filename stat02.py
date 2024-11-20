@@ -13,10 +13,10 @@ MIN_RELATIVE_VOLUME = 2.0
 TOP_STOCKS_COUNT = 20
 
 #folders and trading hours
-data_folder = 'historical_data'
+data_folder = 'processed_data'
 start_time = '09:30:00'
 end_time = '15:59:00'
-start_date = '2022-11-09'
+start_date = '2022-11-21' #new date to fit for all dataset
 end_date = '2024-11-05'
 
 #load and filter data
@@ -36,15 +36,13 @@ def load_filtered_data(file_path):
     return df
 
 #calculate ATR(14-day), Average Volume(14-day), and Relative Volume
-def calculate_indicators(df):
-    df['TR'] = abs(df['high'] - df['low'])
-    df['ATR_14'] = df['TR'].rolling(window=14*390).mean() #390 minute in a trading day
+# def calculate_indicators(df):
+#     df['TR'] = abs(df['high'] - df['low'])
+#     df['ATR_14'] = df['TR'].rolling(window=14*390).mean() #390 minute in a trading day
+#     df['Avg_Volume_14d'] = df['volume'].rolling(window=14*390).mean()
+#     df['Relative_Volume'] = df['volume'] / df['Avg_Volume_14d']
 
-    df['Avg_Volume_14d'] = df['volume'].rolling(window=14*390).mean()
-
-    df['Relative_Volume'] = df['volume'] / df['Avg_Volume_14d']
-
-    return df
+#     return df
 
 #select top stocks (based on our criteria)
 def select_top_stocks(df,ticker):
@@ -72,9 +70,9 @@ def find_top_stocks(data_folder):
             print(f"\nAfter loading data--------------{df.shape}-------------------and head:\n")
             print(df.head)
 
-            df = calculate_indicators(df)
-            print(f"\nAfter Calculating indicators--------------{df.shape}---------and head:\n")
-            print(df.head)
+            # df = calculate_indicators(df)
+            # print(f"\nAfter Calculating indicators--------------{df.shape}---------and head:\n")
+            # print(df.head)
 
             daily_stocks = select_top_stocks(df, ticker)
             print(f"\nAfter applying filter and selecting top stocks-------{daily_stocks.shape}\n")
