@@ -1,6 +1,5 @@
-'''
-This file is to process all the historical data files and get the top trading stocks for each day
-'''
+'''This file is to process all the historical data files and get the top trading stocks for each day'''
+
 import os
 import pandas as pd # type: ignore
 from datetime import datetime
@@ -16,12 +15,16 @@ TOP_STOCKS_COUNT = 20
 data_folder = 'processed_data'
 start_time = '09:30:00'
 end_time = '15:59:00'
-start_date = '2022-11-21' #new date to fit for all dataset
+start_date = '2022-12-13' #new date to fit for all dataset (after calculating all the indicatros ATR, 14_day_avg, Relative Volume)
 end_date = '2024-11-05'
 
 #load and filter data
 def load_filtered_data(file_path):
-    df = pd.read_parquet(file_path, parse_dates=['timestamp'])
+    #df = pd.read_csv(file_path, parse_dates=['timestamp']) #this'll work for .csv not for .parquet
+
+    #for .parquet file and since 'timestamp' is a index and not a regular columns
+    df = pd.read_parquet(file_path)
+    df['timestamp'] = df.index
 
     #convert start and end timestamp with date and time to timestamp object
     start_timestamp = pd.Timestamp(f"{start_date} 09:30:00-05:00")
@@ -34,15 +37,6 @@ def load_filtered_data(file_path):
     df = df[df['timestamp'].dt.time.between(datetime.strptime(start_time, '%H:%M:%S').time(), datetime.strptime(end_time, '%H:%M:%S').time())]
 
     return df
-
-#calculate ATR(14-day), Average Volume(14-day), and Relative Volume
-# def calculate_indicators(df):
-#     df['TR'] = abs(df['high'] - df['low'])
-#     df['ATR_14'] = df['TR'].rolling(window=14*390).mean() #390 minute in a trading day
-#     df['Avg_Volume_14d'] = df['volume'].rolling(window=14*390).mean()
-#     df['Relative_Volume'] = df['volume'] / df['Avg_Volume_14d']
-
-#     return df
 
 #select top stocks (based on our criteria)
 def select_top_stocks(df,ticker):
@@ -69,10 +63,6 @@ def find_top_stocks(data_folder):
             df = load_filtered_data(file_path)
             print(f"\nAfter loading data--------------{df.shape}-------------------and head:\n")
             print(df.head)
-
-            # df = calculate_indicators(df)
-            # print(f"\nAfter Calculating indicators--------------{df.shape}---------and head:\n")
-            # print(df.head)
 
             daily_stocks = select_top_stocks(df, ticker)
             print(f"\nAfter applying filter and selecting top stocks-------{daily_stocks.shape}---------------\n")

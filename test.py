@@ -25,30 +25,30 @@ if start_timestamp < end_timestamp:
 # print(f'\n{tickers_count.sum()}')
 
 #raw_file_path = os.path.join('historical_data', 'TSLA_1_min_data.csv')
-processed_file_path = os.path.join('processed_data', "TSLA.parquet")
+# processed_file_path = os.path.join('processed_data', "TSLA.parquet")
 
-try:
-    # Load raw CSV and preprocess
-    df = pd.read_csv('historical_data/TSLA_1_min_data.csv', parse_dates=['timestamp'])
-    df.set_index('timestamp', inplace=True)
+# try:
+#     # Load raw CSV and preprocess
+#     df = pd.read_csv('historical_data/TSLA_1_min_data.csv', parse_dates=['timestamp'])
+#     df.set_index('timestamp', inplace=True)
 
-    # Save in Parquet format
-    df.to_parquet(processed_file_path)
-    print(f"Processed and saved: TSLA")
-except Exception as e:
-    print(f"Error processing TSLA file: {e}")
+#     # Save in Parquet format
+#     df.to_parquet(processed_file_path)
+#     print(f"Processed and saved: TSLA")
+# except Exception as e:
+#     print(f"Error processing TSLA file: {e}")
 
 
-"""
-META    351
-NFLX    253
-TSLA    104
-MSFT    101
-CRWD     76
-UNH      73
-AMD      66
-ADBE     45
-AVGO     29
-NVDA     14
-QCOM     12
-"""
+def convert_parquet_to_csv(parquet_file, csv_file):
+
+    # Read the Parquet file into a pandas DataFrame
+    df = pd.read_parquet(parquet_file)
+
+    # Write the DataFrame to a CSV file
+    df.to_csv(csv_file)
+
+# Example usage:
+parquet_file = 'processed_data/ADSK.parquet'
+csv_file = 'new_ADSK.csv'
+
+convert_parquet_to_csv(parquet_file, csv_file)

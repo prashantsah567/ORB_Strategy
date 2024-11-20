@@ -33,7 +33,7 @@ import pytz
 
 #constants
 TOP_STOCKS_FILE = 'top_daily_stocks.csv'
-HISTORICAL_DATA_FOLDER = 'historical_data'
+#HISTORICAL_DATA_FOLDER = 'historical_data'
 PROCESSED_DATA_FOLDER = 'processed_data'
 STOP_LOSS_PERCENTAGE = 10 #10%
 LOG_FILE = 'trade_log.csv'
@@ -43,9 +43,9 @@ def get_tickers_for_date(date):
     df = pd.read_csv(TOP_STOCKS_FILE)
     daily_stocks = df[df['date'] == date]
     tickers = daily_stocks['ticker'].tolist()
-    atr_values = dict(zip(daily_stocks['ticker'], daily_stocks['ATR_14']))
+    #atr_values = dict(zip(daily_stocks['ticker'], daily_stocks['ATR_14']))
 
-    return tickers, atr_values
+    return tickers #, atr_values
 
 # load historical data for selected tickers
 '''
@@ -133,15 +133,15 @@ def log_trade(action, ticker, price, entry_time, position_type):
 # main logic for a given trading day
 def process_trading_day(date):
     #get tickers and ATR values for the selected day
-    tickers, atr_values = get_tickers_for_date(date)
+    tickers = get_tickers_for_date(date)
     print(f'Tickers for {date}: {tickers}')
 
-    time_start = time.time()
+    #time_start = time.time()
     #load historical 1-min data for the ticker
     historical_data = load_historical_data(tickers)
-    print(f"total time taken to load historical data is: {time.time() - time_start}")
+    #print(f"total time taken to load historical data is: {time.time() - time_start}")
 
-    time_start = time.time()
+    #time_start = time.time()
     positions = [] #to store open positions for the day
     #check price movement for each ticker
     for ticker, data in historical_data.items():
@@ -172,11 +172,13 @@ def process_trading_day(date):
 
             entry_time = entry_data.index[0]
             entry_price = data.loc[entry_time,'close']
+            atr_value = data.loc[entry_time, 'ATR_14']
+
             if isinstance (entry_price, pd.Series):
                 entry_price = entry_price.iloc[0]
 
             #calculate stop loss for long or short
-            stop_loss = calculate_stop_loss(entry_price, atr_values[ticker], position)
+            stop_loss = calculate_stop_loss(entry_price, atr_value, position)
 
             #log the opening of the trade
             log_trade('open', ticker, entry_price, entry_time, position)
@@ -229,7 +231,7 @@ def process_trading_day(date):
                 'closing_price': exit_price
             })
 
-    print(f"Time taken to run rest of the code and function after data is loaded: {time.time() - time_start}")
+    #print(f"Time taken to run rest of the code and function after data is loaded: {time.time() - time_start}")
 
     return positions
 
