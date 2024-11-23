@@ -86,7 +86,7 @@ def check_price_movement(data, date):
     
     # Construct the start and end times dynamically based on the date
     start_time = pd.Timestamp(f"{date} 09:30:00").tz_localize(eastern, ambiguous='NaT')
-    end_time = pd.Timestamp(f"{date} 09:39:00").tz_localize(eastern, ambiguous='NaT')
+    end_time = pd.Timestamp(f"{date} 09:35:00").tz_localize(eastern, ambiguous='NaT')
     
     try:
         data_filtered = data.loc[start_time:end_time]
@@ -97,15 +97,15 @@ def check_price_movement(data, date):
     #count how many of the 5 candles had close > open
     positive_movement = sum(data_filtered['close'] > data_filtered['open'])
 
-    if positive_movement >= 8:
+    if positive_movement >= 6:
         return 'long'
-    elif positive_movement <= 2:
+    elif positive_movement <= 0:
         return 'short'
     else:
         return 'no_trade'
 
 #calculate stop loss
-def calculate_stop_loss(entry_price, atr, position_type): #**need to re-calculate the atr as the atr we have is from 9:30 but our entry time 9:36
+def calculate_stop_loss(entry_price, atr, position_type):
     if position_type == 'long':
         return entry_price - (STOP_LOSS_PERCENTAGE * atr)
     elif position_type == 'short':
@@ -155,15 +155,15 @@ def process_trading_day(date):
             # Define the US/Eastern timezone using pytz
             eastern = pytz.timezone('US/Eastern')
             # Construct the start and end times dynamically based on the date
-            start_time = pd.Timestamp(f"{date} 09:39:00").tz_localize(eastern, ambiguous='NaT')
+            start_time = pd.Timestamp(f"{date} 09:36:00").tz_localize(eastern, ambiguous='NaT')
 
             #checking for half day
             half_days = ['2022-07-03', '2023-07-03', '2023-11-24', '2024-07-03']
 
             if date in half_days:
-                end_time = pd.Timestamp(f"{date} 13:00:00").tz_localize(eastern, ambiguous='NaT')
+                end_time = pd.Timestamp(f"{date} 12:59:00").tz_localize(eastern, ambiguous='NaT')
             else:
-                end_time = pd.Timestamp(f"{date} 15:56:00").tz_localize(eastern, ambiguous='NaT')
+                end_time = pd.Timestamp(f"{date} 15:55:00").tz_localize(eastern, ambiguous='NaT')
 
             entry_data = data[(data.index >= start_time) & (data.index <= end_time)]
 

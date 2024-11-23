@@ -6,8 +6,8 @@ from datetime import datetime
 
 #constants
 MIN_OPEN_PRICE = 5.0
-MIN_AVG_VOLUME = 10000 #lowering the volume (from 1_000_000) to see more result
-MIN_ATR = 0.30 #lowering the ATR (from 0.5) to see more results
+MIN_AVG_VOLUME = 5000 #lowering the volume (from 1_000_000) to see more result
+MIN_ATR = 0.5 #lowering the ATR (from 0.5) to see more results
 MIN_RELATIVE_VOLUME = 2.0
 TOP_STOCKS_COUNT = 20
 
@@ -15,7 +15,7 @@ TOP_STOCKS_COUNT = 20
 data_folder = 'processed_data'
 start_time = '09:30:00'
 end_time = '15:59:00'
-start_date = '2022-12-13' #new date to fit for all dataset (after calculating all the indicatros ATR, 14_day_avg, Relative Volume)
+start_date = '2022-12-14' #new date to fit for all dataset (after calculating all the indicatros ATR, 14_day_avg, Relative Volume)
 end_date = '2024-11-05'
 
 #load and filter data
@@ -57,7 +57,7 @@ def find_top_stocks(data_folder):
     for filename in os.listdir(data_folder):
         print(f"Processing file----------------------------------------------->: {filename}")
         if filename.endswith(".parquet"):
-            ticker = filename.split(".")[0]
+            ticker = filename.split(".")[0] #** need to split using .csv at the end
             file_path = os.path.join(data_folder, filename)
 
             df = load_filtered_data(file_path)
