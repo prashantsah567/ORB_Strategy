@@ -174,6 +174,9 @@ def process_trading_day(date):
             entry_price = data.loc[entry_time,'close']
             atr_value = data.loc[entry_time, 'ATR_14']
 
+            if atr_value > 0.3: #max_atr value is 0.3 which would limit max stop loss to 3%
+                atr_value = 0.3
+
             if isinstance (entry_price, pd.Series):
                 entry_price = entry_price.iloc[0]
 

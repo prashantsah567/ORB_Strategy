@@ -57,7 +57,7 @@ def find_top_stocks(data_folder):
     for filename in os.listdir(data_folder):
         print(f"Processing file----------------------------------------------->: {filename}")
         if filename.endswith(".parquet"):
-            ticker = filename.split(".")[0] #** need to split using .csv at the end
+            ticker = filename.split(".parquet")[0] #**
             file_path = os.path.join(data_folder, filename)
 
             df = load_filtered_data(file_path)
