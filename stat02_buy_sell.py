@@ -36,7 +36,7 @@ TOP_STOCKS_FILE = 'top_daily_stocks.csv'
 #HISTORICAL_DATA_FOLDER = 'historical_data'
 PROCESSED_DATA_FOLDER = 'processed_data'
 LOG_FILE = 'trade_log.csv'
-STOP_LOSS_PERCENTAGE = 10 #10%
+STOP_LOSS_PERCENTAGE = 0.05 #5% of atr
 atr_value = 0.15 #fixed atr_value for now (so stop loss'll be atr_value * STOP_LOSS_PERCENTAGE = 0.25 * 10 = 2.5)
 trail_percent = 0.02 # 2%
 
@@ -45,9 +45,8 @@ def get_tickers_for_date(date):
     df = pd.read_csv(TOP_STOCKS_FILE)
     daily_stocks = df[df['date'] == date]
     tickers = daily_stocks['ticker'].tolist()
-    #atr_values = dict(zip(daily_stocks['ticker'], daily_stocks['ATR_14']))
 
-    return tickers #, atr_values
+    return tickers
 
 # load historical data for selected tickers
 '''
@@ -94,24 +93,26 @@ def check_price_movement(data, date):
         data_filtered = data.loc[start_time:end_time]
     except KeyError as e:
         print(f"Missing data for the range {start_time} to {end_time}.") #for any missing timestamp
-        return 'no_trade'
+        return 'no_trade',0
 
-    #count how many of the 5 candles had close > open
+    #count how many of the candles (from 09:30 to 09:35) had close > open
     positive_movement = sum(data_filtered['close'] > data_filtered['open'])
 
     if positive_movement >= 6:
-        return 'long'
+        lowest_ob_price = data_filtered[['open', 'close']].min().min()
+        return 'long', lowest_ob_price
     elif positive_movement <= 0:
-        return 'short'
+        highest_ob_price = data_filtered[['open', 'close']].max().max()
+        return 'short', highest_ob_price
     else:
-        return 'no_trade'
+        return 'no_trade',0
 
 #calculate stop loss
 def calculate_stop_loss(entry_price, atr, position_type):
     if position_type == 'long':
-        return entry_price - (STOP_LOSS_PERCENTAGE * atr)
+        return entry_price - (entry_price * STOP_LOSS_PERCENTAGE * atr)
     elif position_type == 'short':
-        return entry_price + (STOP_LOSS_PERCENTAGE * atr)
+        return entry_price + (entry_price * STOP_LOSS_PERCENTAGE * atr)
 
 #trailing stop loss 
 def update_trailing_stop_loss(current_price, highest_price, atr, trail_percent, position_type):
@@ -165,7 +166,7 @@ def process_trading_day(date):
     #check price movement for each ticker
     for ticker, data in historical_data.items():
         print(f"Analyzing {ticker}...")
-        position = check_price_movement(data, date)
+        position, ob_price = check_price_movement(data, date)
 
         if position != 'no_trade':
             #start_time = pd.Timestamp(f"{date} 09:36:00-05:00")
@@ -174,7 +175,7 @@ def process_trading_day(date):
             # Define the US/Eastern timezone using pytz
             eastern = pytz.timezone('US/Eastern')
             # Construct the start and end times dynamically based on the date
-            start_time = pd.Timestamp(f"{date} 09:35:00").tz_localize(eastern, ambiguous='NaT')
+            start_time = pd.Timestamp(f"{date} 09:36:00").tz_localize(eastern, ambiguous='NaT')
 
             #checking for half day
             half_days = ['2022-07-03', '2023-07-03', '2023-11-24', '2024-07-03']
@@ -192,9 +193,33 @@ def process_trading_day(date):
 
             entry_time = entry_data.index[0]
             entry_price = data.loc[entry_time,'close']
+
+            '''this part of code is to put a limit buy (either lowest or highest in the first 5 mins)'''
+            '''
+            entry_time = None
+            entry_price = None
+
+            #entering the trade only when we get the price (low or high in the first 5 minutes) -- (limit buy)
+            for timestamp, row in entry_data.iterrows():
+                current_price = row['close']
+
+                if position == 'long' and current_price <= ob_price:
+                    entry_time = timestamp
+                    entry_price = current_price
+                    break
+                elif position == 'short' and current_price >= ob_price:
+                    entry_time = timestamp
+                    entry_price = current_price
+                    break
+
+            #skip to the next ticker if no trade entry occured
+            if entry_time is None or entry_price is None:
+                continue
+            '''
+
             #incase there are multiple values at the entry_price, choose the first one
-            if isinstance (entry_price, pd.Series):
-                entry_price = entry_price.iloc[0] #handle ambiguity
+            # if isinstance (entry_price, pd.Series):
+            #     entry_price = entry_price.iloc[0] #handle ambiguity
             
             # atr_value = data.loc[entry_time, 'ATR_14']
             # if atr_value > 0.3: #max_atr value is 0.3 which would limit max stop loss to 3%
@@ -212,14 +237,14 @@ def process_trading_day(date):
             exit_time = None
             exit_price = None
 
-            #start: for setting the check interval to 5-minutes
-            entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
+            #start: for setting the check interval to 5-minutes ###############################################################
+            # entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
             '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
-            entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
-            #end: for the 5-minute check code
+            #entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
+            #end: for the 5-minute check code ###############################################################
 
             #for timestamp, row in entry_data.iterrows(): (if want to switch to 1-min, just replace entry_data_resampled_for_5_min with entry_data)
-            for timestamp, row in entry_data_resampled_for_5_min.iterrows():
+            for timestamp, row in entry_data.iterrows():
                 current_price = row['close']
                 
                 if isinstance(current_price, pd.Series):

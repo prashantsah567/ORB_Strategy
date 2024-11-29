@@ -1,26 +1,26 @@
-'''This file is to process all the historical data files and get the top trading stocks for each day'''
+'''Process all the data in the processed_data folder to get the top trading stocks on each day based on defined condition at !1'''
 
 import os
 import pandas as pd # type: ignore
 from datetime import datetime
 
-#constants
+#!1 - constants
 MIN_OPEN_PRICE = 5.0
-MIN_AVG_VOLUME = 5000 #lowering the volume (from 1_000_000) to see more result
-MIN_ATR = 0.5 #lowering the ATR (from 0.5) to see more results
+MIN_AVG_VOLUME = 10000 #lowering the volume (from 1_000_000) to see more result
+MIN_ATR = 0.5
 MIN_RELATIVE_VOLUME = 2.0
-TOP_STOCKS_COUNT = 20
+TOP_STOCKS_COUNT = 20 #max 20 stocks for a certain trading day
 
 #folders and trading hours
 data_folder = 'processed_data'
 start_time = '09:30:00'
-end_time = '15:59:00'
-start_date = '2022-12-14' #new date to fit for all dataset (after calculating all the indicatros ATR, 14_day_avg, Relative Volume)
+end_time = '09:35:00' #putting end time as 9:35, so that we only choose those stocks which fits our criteria in the first 5 mins
+start_date = '2022-12-14' # date that fits all dataset after calculating all the indicatros ATR, 14_day_avg and Relative Volume
 end_date = '2024-11-05'
 
 #load and filter data
 def load_filtered_data(file_path):
-    #df = pd.read_csv(file_path, parse_dates=['timestamp']) #this'll work for .csv not for .parquet
+    #df = pd.read_csv(file_path, parse_dates=['timestamp']) #this format will work for .csv not for .parquet
 
     #for .parquet file and since 'timestamp' is a index and not a regular columns
     df = pd.read_parquet(file_path)
@@ -28,7 +28,8 @@ def load_filtered_data(file_path):
 
     #convert start and end timestamp with date and time to timestamp object
     start_timestamp = pd.Timestamp(f"{start_date} 09:30:00-05:00")
-    end_timestamp = pd.Timestamp(f"{end_date} 15:59:00-05:00")
+    end_timestamp = pd.Timestamp(f"{end_date} 09:35:00-05:00") 
+
     #filter by date and time
     df = df[(df['timestamp'] >= start_timestamp) & (df['timestamp'] <= end_timestamp)]
 
@@ -57,23 +58,24 @@ def find_top_stocks(data_folder):
     for filename in os.listdir(data_folder):
         print(f"Processing file----------------------------------------------->: {filename}")
         if filename.endswith(".parquet"):
-            ticker = filename.split(".parquet")[0] #**
+            ticker = filename.split(".parquet")[0] 
             file_path = os.path.join(data_folder, filename)
 
             df = load_filtered_data(file_path)
             print(f"\nAfter loading data--------------{df.shape}-------------------and head:\n")
-            print(df.head)
+            #print(df.head)
 
             daily_stocks = select_top_stocks(df, ticker)
             print(f"\nAfter applying filter and selecting top stocks-------{daily_stocks.shape}---------------\n")
-            print(daily_stocks.head)
+            #print(daily_stocks.head)
 
             all_stocks = pd.concat([all_stocks, daily_stocks], ignore_index=True)
 
-    #find top 20 stocks each day based on relative volume (**might change*)
+    #top 20 stocks each day based on relative volume
     top_daily_stocks = all_stocks.sort_values(by=['date', 'Relative_Volume'], ascending=[True, False]).groupby('date') \
                        .head(TOP_STOCKS_COUNT).reset_index(drop=True)
-    #if don't want to put 20 limit
+    
+    #without 20 limit
     #top_daily_stocks = all_stocks.sort_values(by=['date', 'Relative_Volume'], ascending=[True, False]).reset_index(drop=True)
     
     return top_daily_stocks
