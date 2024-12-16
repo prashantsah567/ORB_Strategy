@@ -98,10 +98,10 @@ def check_price_movement(data, date):
     #count how many of the candles (from 09:30 to 09:35) had close > open
     positive_movement = sum(data_filtered['close'] > data_filtered['open'])
 
-    if positive_movement >= 6:
+    if positive_movement >= 5:
         lowest_ob_price = data_filtered[['open', 'close']].min().min()
         return 'long', lowest_ob_price
-    elif positive_movement <= 0:
+    elif positive_movement <= 1:
         highest_ob_price = data_filtered[['open', 'close']].max().max()
         return 'short', highest_ob_price
     else:
@@ -177,7 +177,7 @@ def process_trading_day(date):
             # Define the US/Eastern timezone using pytz
             eastern = pytz.timezone('US/Eastern')
             # Construct the start and end times dynamically based on the date
-            start_time = pd.Timestamp(f"{date} 09:36:00").tz_localize(eastern, ambiguous='NaT')
+            start_time = pd.Timestamp(f"{date} 09:35:00").tz_localize(eastern, ambiguous='NaT')
 
             #checking for half day
             half_days = ['2022-07-03', '2023-07-03', '2023-11-24', '2024-07-03']
@@ -192,9 +192,29 @@ def process_trading_day(date):
 
             if entry_data.empty:
                 continue
+            
+            #regular entry price and time 09:35 (can change to 09:36 in line 180)
+            # entry_time = entry_data.index[0]
+            # entry_price = data.loc[entry_time,'close']
 
-            entry_time = entry_data.index[0]
-            entry_price = data.loc[entry_time,'close']
+            entry_time_init = entry_data.index[0]
+            entry_price_init = data.loc[entry_time_init,'close']
+
+            entry_time = None
+            entry_price = None
+
+            #additional changes for setting entry_price as 2% below the 09:35 price
+            for timestamp, row in entry_data.iterrows():
+                current_price = row['close']
+
+                if position == 'long' and current_price <= (entry_price_init - (entry_price_init * 0.01)):
+                    entry_time = timestamp
+                    entry_price = current_price
+                    break #got the entry, exit out of loop
+                elif position == 'short' and current_price >= (entry_price_init + (entry_price_init * 0.01)):
+                    entry_time = timestamp
+                    entry_price = current_price
+                    break #got the entry, exit out of loop
 
             '''this part of code is to put a limit buy (either lowest or highest in the first 5 mins)'''
             '''
@@ -227,67 +247,74 @@ def process_trading_day(date):
             # if atr_value > 0.3: #max_atr value is 0.3 which would limit max stop loss to 3%
             #     atr_value = 0.3
 
-            #calculate stop loss for long or short
-            stop_loss = calculate_stop_loss(entry_price, atr_value, position)
-
-            #highest_price = entry_price #+ (entry_price * 0.015) #for long, this is the highest price; for short, it's the lowest
-
-            #log the opening of the trade
-            log_trade('open', ticker, entry_price, entry_time, position)
-            
-            #monitor the intraday price action
-            exit_time = None
-            exit_price = None
-
-            #start: for setting the check interval to 5-minutes ###############################################################
-            # entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
-            # '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
-            # entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
-            #end: for the 5-minute check code ###############################################################
-
-            #for timestamp, row in entry_data.iterrows(): (if want to switch to 1-min, just replace entry_data_resampled_for_5_min with entry_data)
-            for timestamp, row in entry_data.iterrows():
-                current_price = row['close']
+            #only go for any calculation or exit position if we entered a position
+            if entry_price is not None:
                 
-                if isinstance(current_price, pd.Series):
-                    current_price = current_price.iloc[0] #handle ambiguity
+                #so for the exit time, the timestamp need to start from the entry time (need to change the entry_data)
+                entry_data = data[(data.index > entry_time) & (data.index <= end_time)] #start_time is entry_time now
 
-                #calling the trailing stop loss to get the udpated stop_loss (if applicable) and new highest price
-                # if (position == 'long' and current_price > highest_price) or (position == 'short' and current_price < highest_price) :
-                #     stop_loss, highest_price = update_trailing_stop_loss(current_price=current_price, highest_price=highest_price, atr=atr_value, trail_percent=trail_percent, position_type=position)
+                #calculate stop loss for long or short
+                #stop_loss = calculate_stop_loss(entry_price, atr_value, position)
+                stop_loss = calculate_stop_loss(entry_price, atr_value, position) #new stop loss
 
-                '''this applies only for 5x timestamp'''
-                #get the time part only from timestamp
-                # time_part = timestamp.strftime('%H:%M:%S')
-                # if time_part != '09:30:00':
+                #highest_price = entry_price #+ (entry_price * 0.015) #for long, this is the highest price; for short, it's the lowest
 
-                if position == 'long' and current_price < stop_loss:
-                    exit_time = timestamp
-                    exit_price = current_price
-                    break #stop-loss hit, exit trade
-                elif position == 'short' and current_price > stop_loss:
-                    exit_time = timestamp
-                    exit_price = current_price
-                    break #stop-loss hit, exit trade
+                #log the opening of the trade
+                log_trade('open', ticker, entry_price, entry_time, position)
+                
+                #monitor the intraday price action
+                exit_time = None
+                exit_price = None
 
-            #if stop-loss wasn't hit, close at EOD
-            if exit_time is None:
-                exit_time = end_time
-                exit_price = data.loc[end_time]['close']
+                #start: for setting the check interval to 5-minutes ###############################################################
+                # entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
+                # '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
+                # entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
+                #end: for the 5-minute check code ###############################################################
 
-            #log the closing of the trade
-            log_trade('close', ticker, exit_price, exit_time, position)
+                #for timestamp, row in entry_data.iterrows(): (if want to switch to 1-min, just replace entry_data_resampled_for_5_min with entry_data)
+                for timestamp, row in entry_data.iterrows():
+                    current_price = row['close']
+                    
+                    if isinstance(current_price, pd.Series):
+                        current_price = current_price.iloc[0] #handle ambiguity
 
-            #store the postion
-            positions.append({
-                'ticker': ticker,
-                'position': positions,
-                'entry_time': entry_time,
-                'entry_price': entry_price,
-                'stop_loss': stop_loss,
-                'closing_time': exit_time,
-                'closing_price': exit_price
-            })
+                    #calling the trailing stop loss to get the udpated stop_loss (if applicable) and new highest price
+                    # if (position == 'long' and current_price > highest_price) or (position == 'short' and current_price < highest_price) :
+                    #     stop_loss, highest_price = update_trailing_stop_loss(current_price=current_price, highest_price=highest_price, atr=atr_value, trail_percent=trail_percent, position_type=position)
+
+                    '''this applies only for 5x timestamp'''
+                    #get the time part only from timestamp
+                    # time_part = timestamp.strftime('%H:%M:%S')
+                    # if time_part != '09:30:00':
+
+                    if position == 'long' and current_price < stop_loss:
+                        exit_time = timestamp
+                        exit_price = current_price
+                        break #stop-loss hit, exit trade
+                    elif position == 'short' and current_price > stop_loss:
+                        exit_time = timestamp
+                        exit_price = current_price
+                        break #stop-loss hit, exit trade
+
+                #if stop-loss wasn't hit, close at EOD
+                if exit_time is None:
+                    exit_time = end_time
+                    exit_price = data.loc[end_time]['close']
+
+                #log the closing of the trade
+                log_trade('close', ticker, exit_price, exit_time, position)
+
+                #store the postion
+                positions.append({
+                    'ticker': ticker,
+                    'position': positions,
+                    'entry_time': entry_time,
+                    'entry_price': entry_price,
+                    'stop_loss': stop_loss,
+                    'closing_time': exit_time,
+                    'closing_price': exit_price
+                })
 
     #print(f"Time taken to run rest of the code and function after data is loaded: {time.time() - time_start}")
 
