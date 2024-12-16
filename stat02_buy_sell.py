@@ -29,16 +29,16 @@ import pandas as pd # type: ignore
 from datetime import datetime
 import os
 import time
-import pytz
+import pytz # type: ignore
 
 #constants
 TOP_STOCKS_FILE = 'top_daily_stocks.csv'
 #HISTORICAL_DATA_FOLDER = 'historical_data'
-PROCESSED_DATA_FOLDER = 'processed_data'
+PROCESSED_DATA_FOLDER = 'processed_data_new'
 LOG_FILE = 'trade_log.csv'
 STOP_LOSS_PERCENTAGE = 0.05 #5% of atr
-atr_value = 0.15 #fixed atr_value for now (so stop loss'll be atr_value * STOP_LOSS_PERCENTAGE = 0.25 * 10 = 2.5)
-trail_percent = 0.02 # 2%
+atr_value = 0.15 #fixed atr_value for now (so stop loss'll be atr_value * STOP_LOSS_PERCENTAGE = 0.15 * 0.05 = 0.0075)
+#trail_percent = 0.02 # 2%
 
 #helper function to get tickers for a given date
 def get_tickers_for_date(date):
@@ -48,7 +48,7 @@ def get_tickers_for_date(date):
 
     return tickers
 
-# load historical data for selected tickers
+# load historical data for selected tickers (for .csv)
 '''
 def load_historical_data(tickers):
     data = {}
@@ -115,6 +115,7 @@ def calculate_stop_loss(entry_price, atr, position_type):
         return entry_price + (entry_price * STOP_LOSS_PERCENTAGE * atr)
 
 #trailing stop loss 
+'''
 def update_trailing_stop_loss(current_price, highest_price, atr, trail_percent, position_type):
     if position_type == 'long':
         #update trailing stop only if the current price exceeds the highest recorded price
@@ -130,6 +131,7 @@ def update_trailing_stop_loss(current_price, highest_price, atr, trail_percent, 
         trailing_stop = highest_price + (trail_percent * highest_price)
 
     return trailing_stop, highest_price
+'''
 
 #log trades
 def log_trade(action, ticker, price, entry_time, position_type):
@@ -228,7 +230,7 @@ def process_trading_day(date):
             #calculate stop loss for long or short
             stop_loss = calculate_stop_loss(entry_price, atr_value, position)
 
-            highest_price = entry_price #+ (entry_price * 0.015) #for long, this is the highest price; for short, it's the lowest
+            #highest_price = entry_price #+ (entry_price * 0.015) #for long, this is the highest price; for short, it's the lowest
 
             #log the opening of the trade
             log_trade('open', ticker, entry_price, entry_time, position)
@@ -239,8 +241,8 @@ def process_trading_day(date):
 
             #start: for setting the check interval to 5-minutes ###############################################################
             # entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
-            '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
-            #entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
+            # '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
+            # entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
             #end: for the 5-minute check code ###############################################################
 
             #for timestamp, row in entry_data.iterrows(): (if want to switch to 1-min, just replace entry_data_resampled_for_5_min with entry_data)
@@ -250,18 +252,20 @@ def process_trading_day(date):
                 if isinstance(current_price, pd.Series):
                     current_price = current_price.iloc[0] #handle ambiguity
 
-                #additional print statement
-                #print(f"Processing {ticker} at {timestamp}: current_price={current_price}, stop_loss={stop_loss}")
-
                 #calling the trailing stop loss to get the udpated stop_loss (if applicable) and new highest price
                 # if (position == 'long' and current_price > highest_price) or (position == 'short' and current_price < highest_price) :
                 #     stop_loss, highest_price = update_trailing_stop_loss(current_price=current_price, highest_price=highest_price, atr=atr_value, trail_percent=trail_percent, position_type=position)
 
-                if position == 'long' and current_price <= stop_loss:
+                '''this applies only for 5x timestamp'''
+                #get the time part only from timestamp
+                # time_part = timestamp.strftime('%H:%M:%S')
+                # if time_part != '09:30:00':
+
+                if position == 'long' and current_price < stop_loss:
                     exit_time = timestamp
                     exit_price = current_price
                     break #stop-loss hit, exit trade
-                elif position == 'short' and current_price >= stop_loss:
+                elif position == 'short' and current_price > stop_loss:
                     exit_time = timestamp
                     exit_price = current_price
                     break #stop-loss hit, exit trade

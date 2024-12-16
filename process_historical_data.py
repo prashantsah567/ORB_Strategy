@@ -3,11 +3,11 @@ import pandas as pd
 import numpy as np
 import pytz
 
-RAW_DATA_FOLDER = 'historical_data'
-PROCESSED_DATA_FOLDER = 'processed_data'
+RAW_DATA_FOLDER = 'historical_data_new'
+PROCESSED_DATA_FOLDER = 'processed_data_new'
 
+#calculate ATR, Average Volume & Relative Volume
 def calculate_indicators(df):
-    """Calculate ATR (Average True Range) for the DataFrame."""
     df['high_low'] = df['high'] - df['low']
     df['high_close'] = np.abs(df['high'] - df['close'].shift())
     df['low_close'] = np.abs(df['low'] - df['close'].shift())

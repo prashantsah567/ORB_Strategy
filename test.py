@@ -48,7 +48,7 @@ def convert_parquet_to_csv(parquet_file, csv_file):
     df.to_csv(csv_file)
 
 # Example usage:
-parquet_file = 'processed_data/ADSK.parquet'
-csv_file = 'new_ADSK.csv'
+parquet_file = 'processed_data_new/A.parquet'
+csv_file = 'New_A.csv'
 
 convert_parquet_to_csv(parquet_file, csv_file)

@@ -3,6 +3,7 @@
 import os
 import pandas as pd # type: ignore
 from datetime import datetime
+import pytz
 
 #!1 - constants
 MIN_OPEN_PRICE = 5.0
@@ -12,11 +13,11 @@ MIN_RELATIVE_VOLUME = 2.0
 TOP_STOCKS_COUNT = 20 #max 20 stocks for a certain trading day
 
 #folders and trading hours
-data_folder = 'processed_data'
+data_folder = 'processed_data_new'
 start_time = '09:30:00'
 end_time = '09:35:00' #putting end time as 9:35, so that we only choose those stocks which fits our criteria in the first 5 mins
-start_date = '2022-12-14' # date that fits all dataset after calculating all the indicatros ATR, 14_day_avg and Relative Volume
-end_date = '2024-11-05'
+start_date = '2022-11-30' # date that fits all dataset after calculating all the indicatros ATR, 14_day_avg and Relative Volume
+end_date = '2024-11-27'
 
 #load and filter data
 def load_filtered_data(file_path):
@@ -27,8 +28,13 @@ def load_filtered_data(file_path):
     df['timestamp'] = df.index
 
     #convert start and end timestamp with date and time to timestamp object
-    start_timestamp = pd.Timestamp(f"{start_date} 09:30:00-05:00")
-    end_timestamp = pd.Timestamp(f"{end_date} 09:35:00-05:00") 
+    # start_timestamp = pd.Timestamp(f"{start_date} 09:30:00-05:00")
+    # end_timestamp = pd.Timestamp(f"{end_date} 09:35:00-05:00") 
+    
+    # Define start and end timestamps dynamically in 'America/New_York'
+    eastern = pytz.timezone('America/New_York')
+    start_timestamp = eastern.localize(pd.Timestamp(f"{start_date} 09:30:00"))
+    end_timestamp = eastern.localize(pd.Timestamp(f"{end_date} 09:35:00"))
 
     #filter by date and time
     df = df[(df['timestamp'] >= start_timestamp) & (df['timestamp'] <= end_timestamp)]

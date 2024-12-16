@@ -1,12 +1,12 @@
-import pandas as pd
-import numpy as np
+import pandas as pd  # type: ignore
+import numpy as np # type: ignore
 import os
-import pytz
+import pytz # type: ignore
 
 # File paths
-log_file = "logs/trade_log.csv"  # Path to trade log file
-output_file = "logs/final_metrics.csv"  # Path to save final results
-trade_details_file = "logs/trade_details.csv" #file for detailed trade data
+log_file = "logs/trade_log.csv"  # Path to trade log file which will be used for trade calculation
+metrics_output_file = "logs/final_metrics.csv"  # Path to save final results
+trade_details_file = "logs/trade_details.csv" #file for detailed trade logs
 
 # Initialize variables
 starting_capital = 100000
@@ -67,14 +67,15 @@ for date, daily_data in log_df.groupby('date'):
         exit_time = close_trade.iloc[0]['timestamp']
         position_type = open_trade.iloc[0]['position_type']
         shares = capital_per_stock / open_price
-        commission = 0.005 * shares
-        borrow_fee = 0.005 * capital_per_stock if position_type == "short" else 0
+        commission = 0.0035 * shares
+        #since we are not holding the position overnight, there is no borrow fee
+        #borrow_fee = 0.005 * capital_per_stock if position_type == "short" else 0
 
         # Calculate profit/loss
         if position_type == "long":
-            trade_profit = ((close_price - open_price) * shares - 2 * commission - borrow_fee)
+            trade_profit = ((close_price - open_price) * shares - 2 * commission) # - borrow_fee)
         else: 
-            trade_profit = ((open_price - close_price) * shares - 2 * commission - borrow_fee)
+            trade_profit = ((open_price - close_price) * shares - 2 * commission) # - borrow_fee)
 
         # Update capital and returns
         capital += trade_profit
@@ -108,9 +109,14 @@ metrics["Total Return (%)"] = ((capital - starting_capital) / starting_capital) 
 metrics["Volatility"] = np.std(daily_returns)
 metrics["Sharpe Ratio"] = (np.mean(daily_returns) - risk_free_rate) / metrics["Volatility"]
 
-# Save metrics to file
+# Save metrics to metrics_output_file
 metrics_df = pd.DataFrame([metrics])
-metrics_df.to_csv(output_file, index=False)
+metrics_df.to_csv(metrics_output_file, index=False)
 
-print(f"Metrics saved to {output_file}")
-print(f"Trade details saved to {trade_details_file}")
+#print the results ######################################################################
+print(f"Final Capital = {capital}")
+print(f"Total % Return =  {((capital - starting_capital) / starting_capital) * 100}")
+df = pd.read_csv('logs/trade_details.csv') #read the trade details file for return based on position type (long and short)
+result = df.groupby('position_type')['% of profit/loss'].agg(['sum', 'count']).reset_index()
+result.columns = ['position_type', '(%)_return', 'Num_of_Trades'] #rename the columns for readability 
+print(result)
