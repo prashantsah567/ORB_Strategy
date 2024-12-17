@@ -1,10 +1,9 @@
 import os
-import pandas as pd
-import numpy as np
-import pytz
+import pandas as pd # type: ignore
+import numpy as np # type: ignore
 
-RAW_DATA_FOLDER = 'historical_data_new'
-PROCESSED_DATA_FOLDER = 'processed_data_new'
+RAW_DATA_FOLDER = './historical_data_new'
+PROCESSED_DATA_FOLDER = './processed_data_new'
 
 #calculate ATR, Average Volume & Relative Volume
 def calculate_indicators(df):

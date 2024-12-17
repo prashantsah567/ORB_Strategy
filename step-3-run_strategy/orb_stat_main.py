@@ -30,15 +30,17 @@ from datetime import datetime
 import os
 import time
 import pytz # type: ignore
+import shutil
 
 #constants
-TOP_STOCKS_FILE = 'top_daily_stocks.csv'
+TOP_STOCKS_FILE = './step-2-get_candidate_stocks/top_qualified_daily_stocks_20_max.csv'
 #HISTORICAL_DATA_FOLDER = 'historical_data'
-PROCESSED_DATA_FOLDER = 'processed_data_new'
-LOG_FILE = 'trade_log.csv'
+PROCESSED_DATA_FOLDER = './processed_data_new'
+LOG_FILE = 'trade_log_initial.csv'
 STOP_LOSS_PERCENTAGE = 0.05 #5% of atr
 atr_value = 0.15 #fixed atr_value for now (so stop loss'll be atr_value * STOP_LOSS_PERCENTAGE = 0.15 * 0.05 = 0.0075)
 #trail_percent = 0.02 # 2%
+ENTRY_PERCENTAGE_CHANGE = 0.015
 
 #helper function to get tickers for a given date
 def get_tickers_for_date(date):
@@ -207,11 +209,11 @@ def process_trading_day(date):
             for timestamp, row in entry_data.iterrows():
                 current_price = row['close']
 
-                if position == 'long' and current_price <= (entry_price_init - (entry_price_init * 0.01)):
+                if position == 'long' and current_price <= (entry_price_init - (entry_price_init * ENTRY_PERCENTAGE_CHANGE)):
                     entry_time = timestamp
                     entry_price = current_price
                     break #got the entry, exit out of loop
-                elif position == 'short' and current_price >= (entry_price_init + (entry_price_init * 0.01)):
+                elif position == 'short' and current_price >= (entry_price_init + (entry_price_init * ENTRY_PERCENTAGE_CHANGE)):
                     entry_time = timestamp
                     entry_price = current_price
                     break #got the entry, exit out of loop
@@ -328,6 +330,11 @@ def get_unique_dates(file_path):
 
 if __name__ == "__main__":
 
+    #delete the log folder (all content of it) before running the script (to store new log files)
+    folder_path = 'logs/'
+    if os.path.exists(folder_path):
+        shutil.rmtree(folder_path)
+
     unique_date = get_unique_dates(TOP_STOCKS_FILE)
     
     for trading_date in unique_date:
@@ -341,11 +348,3 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     positions = process_trading_day('2023-07-03')
-
-'''
-1. ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
-at if position == 'long' and current_price <= stop_loss: at 2023-03-02 09:36:00-05:00    173.29
-2. why loading historical_data is taking too long, can't it be done just by going to that folder
-3. Calculate all the values, check if it can be done from the log file or not
-4. Tweak various parameters to find max result
-'''

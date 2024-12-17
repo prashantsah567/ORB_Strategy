@@ -3,7 +3,7 @@
 import os
 import pandas as pd # type: ignore
 from datetime import datetime
-import pytz
+import pytz # type: ignore
 
 #!1 - constants
 MIN_OPEN_PRICE = 5.0
@@ -13,7 +13,7 @@ MIN_RELATIVE_VOLUME = 2.0
 TOP_STOCKS_COUNT = 20 #max 20 stocks for a certain trading day
 
 #folders and trading hours
-data_folder = 'processed_data_new'
+data_folder = './processed_data_new'
 start_time = '09:30:00'
 end_time = '09:35:00' #putting end time as 9:35, so that we only choose those stocks which fits our criteria in the first 5 mins
 start_date = '2022-11-30' # date that fits all dataset after calculating all the indicatros ATR, 14_day_avg and Relative Volume
@@ -91,6 +91,6 @@ top_stocks = find_top_stocks(data_folder)
 print(f"The final result of top stocks------------------------{top_stocks.shape}---------------------------------")
 
 if top_stocks.shape[0] > 0:
-    top_stocks.to_csv('top_daily_stocks.csv', index=False)
+    top_stocks.to_csv('step-2-get_candidate_stocks/top_qualified_daily_stocks_20_max.csv', index=False)
 else:
     print("No data available for the selected criteria.")
