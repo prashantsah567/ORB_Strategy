@@ -123,12 +123,12 @@ total_percent_return = round(((capital - starting_capital) / starting_capital) *
 print(f"Total % Return =  {total_percent_return}")
 df = pd.read_csv('logs/trade_details.csv') #read the trade details file for return based on position type (long and short)
 result = df.groupby('position_type')['% of profit/loss'].agg(['sum', 'count']).reset_index()
-result.columns = ['position_type', '(%)_return', 'Num_of_Trades'] #rename the columns for readability 
+result.columns = ['position_type', '%_return', 'Num_of_Trades'] #rename the columns for readability 
 print(result)
 
 #extract values from result
-long_return = round(result.loc[result['position_type'] == 'long', '(%)_return'].values[0],2)
-short_return = round(result.loc[result['position_type'] == 'short', '(%)_return'].values[0],2)
+long_return = round(result.loc[result['position_type'] == 'long', '%_return'].values[0],2)
+short_return = round(result.loc[result['position_type'] == 'short', '%_return'].values[0],2)
 long_trades = result.loc[result['position_type'] == 'long', 'Num_of_Trades'].values[0]
 short_trades = result.loc[result['position_type'] == 'short', 'Num_of_Trades'].values[0]
 
@@ -146,7 +146,8 @@ test_result_data = {
     'short_%_return': short_return,
     'total_short_trades': short_trades,
     'total_%_return': total_percent_return,
-    'final_capital': round(capital,2)
+    'final_capital': round(capital,2),
+    'Data_Interval': '5_min'
 }
 
 result_df = pd.DataFrame([test_result_data])

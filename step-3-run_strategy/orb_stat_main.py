@@ -13,7 +13,7 @@ PROCESSED_DATA_FOLDER = './processed_data_new'
 LOG_FILE = 'trade_log_initial.csv'
 STOP_LOSS_PERCENTAGE = 0.05 #5% of atr
 atr_value = 0.15 #fixed atr_value for now (so stop loss'll be atr_value * STOP_LOSS_PERCENTAGE = 0.15 * 0.05 = 0.0075)
-PERCENTAGE_CHANGE_BEFORE_ENTRY = 0.01
+PERCENTAGE_CHANGE_BEFORE_ENTRY = 0.0025 #0.25% change before entry
 #trail_percent = 0.02 # 2%
 
 #helper function to get tickers for a given date
@@ -241,13 +241,12 @@ def process_trading_day(date):
                 exit_price = None
 
                 #start: for setting the check interval to 5-minutes ###############################################################
-                # entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
-                # '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
-                # entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
+                entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
+                entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
                 #end: for the 5-minute check code ###############################################################
 
                 #for timestamp, row in entry_data.iterrows(): (if want to switch to 1-min, just replace entry_data_resampled_for_5_min with entry_data)
-                for timestamp, row in entry_data.iterrows():
+                for timestamp, row in entry_data_resampled_for_5_min.iterrows():
                     current_price = row['close']
                     
                     if isinstance(current_price, pd.Series):
@@ -259,17 +258,17 @@ def process_trading_day(date):
 
                     '''this applies only for 5x timestamp'''
                     #get the time part only from timestamp
-                    # time_part = timestamp.strftime('%H:%M:%S')
-                    # if time_part != '09:30:00':
+                    time_part = timestamp.strftime('%H:%M:%S')
+                    if time_part != '09:30:00' or time_part != '09:35:00': #skip the first 2 timestamps as our start time is 09:36
 
-                    if position == 'long' and current_price < stop_loss:
-                        exit_time = timestamp
-                        exit_price = current_price
-                        break #stop-loss hit, exit trade
-                    elif position == 'short' and current_price > stop_loss:
-                        exit_time = timestamp
-                        exit_price = current_price
-                        break #stop-loss hit, exit trade
+                        if position == 'long' and current_price < stop_loss:
+                            exit_time = timestamp
+                            exit_price = current_price
+                            break #stop-loss hit, exit trade
+                        elif position == 'short' and current_price > stop_loss:
+                            exit_time = timestamp
+                            exit_price = current_price
+                            break #stop-loss hit, exit trade
 
                 #if stop-loss wasn't hit, close at EOD
                 if exit_time is None:
