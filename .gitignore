@@ -6,3 +6,5 @@ top_daily_stocks.csv
 New_A.csv
 historical_data_new/
 processed_data_new/
+archive/
+__pycache__/

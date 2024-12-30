@@ -4,9 +4,13 @@ import os
 import pytz # type: ignore
 
 # File paths
-log_file = "logs/trade_log.csv"  # Path to trade log file which will be used for trade calculation
+log_file = "logs/trade_log_initial.csv"  # Path to trade log file which will be used for trade calculation
 metrics_output_file = "logs/final_metrics.csv"  # Path to save final results
 trade_details_file = "logs/trade_details.csv" #file for detailed trade logs
+
+#delete the previously generated log file (trade_details); final_metrics file replaces its value so no need to delete
+if os.path.exists(trade_details_file):
+    os.remove(trade_details_file)
 
 # Initialize variables
 starting_capital = 100000
@@ -114,9 +118,41 @@ metrics_df = pd.DataFrame([metrics])
 metrics_df.to_csv(metrics_output_file, index=False)
 
 #print the results ######################################################################
-print(f"Final Capital = {capital}")
-print(f"Total % Return =  {((capital - starting_capital) / starting_capital) * 100}")
+print(f"Final Capital = {round(capital,2)}")
+total_percent_return = round(((capital - starting_capital) / starting_capital) * 100,2)
+print(f"Total % Return =  {total_percent_return}")
 df = pd.read_csv('logs/trade_details.csv') #read the trade details file for return based on position type (long and short)
 result = df.groupby('position_type')['% of profit/loss'].agg(['sum', 'count']).reset_index()
 result.columns = ['position_type', '(%)_return', 'Num_of_Trades'] #rename the columns for readability 
 print(result)
+
+#extract values from result
+long_return = round(result.loc[result['position_type'] == 'long', '(%)_return'].values[0],2)
+short_return = round(result.loc[result['position_type'] == 'short', '(%)_return'].values[0],2)
+long_trades = result.loc[result['position_type'] == 'long', 'Num_of_Trades'].values[0]
+short_trades = result.loc[result['position_type'] == 'short', 'Num_of_Trades'].values[0]
+
+#append the final result to a .csv file (for testing) #######################################################
+import sys
+sys.path.append('./step-3-run_strategy')
+from orb_stat_main import STOP_LOSS_PERCENTAGE, atr_value, PERCENTAGE_CHANGE_BEFORE_ENTRY # type: ignore
+
+test_result_data = {
+    'stop_loss_percent': STOP_LOSS_PERCENTAGE,
+    'atr_value' : atr_value,
+    'entry_%_change (X 100)': PERCENTAGE_CHANGE_BEFORE_ENTRY,
+    'long_%_return': long_return,
+    'total_long_trades': long_trades,
+    'short_%_return': short_return,
+    'total_short_trades': short_trades,
+    'total_%_return': total_percent_return,
+    'final_capital': round(capital,2)
+}
+
+result_df = pd.DataFrame([test_result_data])
+csv_file = 'step-4-result/test_results.csv'
+
+if not os.path.isfile(csv_file):
+    result_df.to_csv(csv_file, index=False)
+else:
+    result_df.to_csv(csv_file, mode='a', header=False, index=False)

@@ -1,10 +1,14 @@
-import os
-import pandas as pd
-import numpy as np
-import pytz
+'''
+This file only need to run once in the beginning or if new dataset are added in historical_data folder.
+Process all the data in the historical_data folder and store in Processed_data folder 
+'''
 
-RAW_DATA_FOLDER = 'historical_data_new'
-PROCESSED_DATA_FOLDER = 'processed_data_new'
+import os
+import pandas as pd # type: ignore
+import numpy as np # type: ignore
+
+RAW_DATA_FOLDER = './historical_data_new'
+PROCESSED_DATA_FOLDER = './processed_data_new'
 
 #calculate ATR, Average Volume & Relative Volume
 def calculate_indicators(df):
