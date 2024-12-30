@@ -135,12 +135,12 @@ short_trades = result.loc[result['position_type'] == 'short', 'Num_of_Trades'].v
 #append the final result to a .csv file (for testing) #######################################################
 import sys
 sys.path.append('./step-3-run_strategy')
-from orb_stat_main import STOP_LOSS_PERCENTAGE, atr_value, ENTRY_PERCENTAGE_CHANGE # type: ignore
+from orb_stat_main import STOP_LOSS_PERCENTAGE, atr_value, PERCENTAGE_CHANGE_BEFORE_ENTRY # type: ignore
 
 test_result_data = {
     'stop_loss_percent': STOP_LOSS_PERCENTAGE,
     'atr_value' : atr_value,
-    'entry_%_change (X 100)': ENTRY_PERCENTAGE_CHANGE,
+    'entry_%_change (X 100)': PERCENTAGE_CHANGE_BEFORE_ENTRY,
     'long_%_return': long_return,
     'total_long_trades': long_trades,
     'short_%_return': short_return,

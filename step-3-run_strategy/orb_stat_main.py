@@ -1,29 +1,4 @@
-'''start the trading strategy here and log all the result into a log file'''
-
-'''
-This is for backtesting. Trading session is from 9:30 to 16:00, so make sure you starting and ending between these time. Also ignore any comments:
-
-1. Total Starting Capital -> $25,000 (only on first trading day, after that whatever it becomes either increases or decreases that would be considered as the new capital) 
-2. The toatal capital will be allocated equally among all the picked stocks for that day
-3. Commision rule -> $0.005/share (applied both when buying and selling)
-4. When taking short position-> Commission + borrow fee (0.5% for now)
-5. Now, first filter the stocks for the current trading day from the top_daily_stocks.csv file (you can store that into a list of tickers just for convinence and it will be updated each day), and after you get the tickers for the current day, you can get the data in the historical_data folder where each ticker data is stored in this format: ticker_1_min_data.csv
-6. Check from 9:30 to 9:35 (check if close price is higher than open price on each candle, so start from 9:31, 9:32, 9:33, 9:34 and 9:35 - at least 4 of them should be in 1 direction either going high or low to take decision)
-7. If the stock price from 9:30 to 9:35 remain higher in at least 4 of the candle (i.e. closing price higher than opening), we buy it (take long position) and if otherwise (means at least for 4 candles closing price is lower than opening) we take short position
-8. We also put a stop loss along with our order with 10% of ATR (so it will be both for short or long position)
-9. If the position is not stopped during the day (by 15:55 PM) close it at 15:56 PM
-10. Closing the position -> Either on stoploss or profit at eod 
-11. Also when you open a position or close a position, i want you to write the record in a file (don't create a new file for each trade, just one), mention: open/close a position at 'Stock Ticker' at price 'mention price here' at 'Time stamp'
-
-other calculations:
-1. Alpha
-2. Beta
-3. Sharpe ratio
-4. Maximum Draw Down (MDD)
-5. Volatility
-6. Total Return in % and $
-7. Final Capital
-'''
+'''This file has the core logic that applies to the candidate stocks from step-2'''
 
 import pandas as pd # type: ignore
 from datetime import datetime
@@ -33,14 +8,13 @@ import pytz # type: ignore
 import shutil
 
 #constants
-TOP_STOCKS_FILE = './step-2-get_candidate_stocks/top_qualified_daily_stocks_20_max.csv'
-#HISTORICAL_DATA_FOLDER = 'historical_data'
+TOP_STOCKS_FILE = './step-2-get_candidate_stocks/top_20_qualified_daily_stocks.csv'
 PROCESSED_DATA_FOLDER = './processed_data_new'
 LOG_FILE = 'trade_log_initial.csv'
 STOP_LOSS_PERCENTAGE = 0.05 #5% of atr
 atr_value = 0.15 #fixed atr_value for now (so stop loss'll be atr_value * STOP_LOSS_PERCENTAGE = 0.15 * 0.05 = 0.0075)
+PERCENTAGE_CHANGE_BEFORE_ENTRY = 0.01
 #trail_percent = 0.02 # 2%
-ENTRY_PERCENTAGE_CHANGE = 0.015
 
 #helper function to get tickers for a given date
 def get_tickers_for_date(date):
@@ -109,14 +83,14 @@ def check_price_movement(data, date):
     else:
         return 'no_trade',0
 
-#calculate stop loss
+#stop loss calculation
 def calculate_stop_loss(entry_price, atr, position_type):
     if position_type == 'long':
         return entry_price - (entry_price * STOP_LOSS_PERCENTAGE * atr)
     elif position_type == 'short':
         return entry_price + (entry_price * STOP_LOSS_PERCENTAGE * atr)
 
-#trailing stop loss 
+#trailing stop loss calculation
 '''
 def update_trailing_stop_loss(current_price, highest_price, atr, trail_percent, position_type):
     if position_type == 'long':
@@ -160,13 +134,11 @@ def process_trading_day(date):
     tickers = get_tickers_for_date(date)
     print(f'Tickers for {date}: {tickers}')
 
-    #time_start = time.time()
     #load historical 1-min data for the ticker
     historical_data = load_historical_data(tickers)
-    #print(f"total time taken to load historical data is: {time.time() - time_start}")
 
-    #time_start = time.time()
     positions = [] #to store open positions for the day
+
     #check price movement for each ticker
     for ticker, data in historical_data.items():
         print(f"Analyzing {ticker}...")
@@ -195,25 +167,26 @@ def process_trading_day(date):
             if entry_data.empty:
                 continue
             
-            #regular entry price and time 09:35 (can change to 09:36 in line 180)
+            #regular entry price and time 09:35 (can change to 09:36 in line 154)
             # entry_time = entry_data.index[0]
             # entry_price = data.loc[entry_time,'close']
 
+            #this is the start time & price for the lookout of entry
             entry_time_init = entry_data.index[0]
             entry_price_init = data.loc[entry_time_init,'close']
 
             entry_time = None
             entry_price = None
 
-            #additional changes for setting entry_price as 2% below the 09:35 price
+            #looking for entry as certain % changes after the entry_time_init & entry_price_init
             for timestamp, row in entry_data.iterrows():
                 current_price = row['close']
 
-                if position == 'long' and current_price <= (entry_price_init - (entry_price_init * ENTRY_PERCENTAGE_CHANGE)):
+                if position == 'long' and current_price <= (entry_price_init - (entry_price_init * PERCENTAGE_CHANGE_BEFORE_ENTRY)):
                     entry_time = timestamp
                     entry_price = current_price
                     break #got the entry, exit out of loop
-                elif position == 'short' and current_price >= (entry_price_init + (entry_price_init * ENTRY_PERCENTAGE_CHANGE)):
+                elif position == 'short' and current_price >= (entry_price_init + (entry_price_init * PERCENTAGE_CHANGE_BEFORE_ENTRY)):
                     entry_time = timestamp
                     entry_price = current_price
                     break #got the entry, exit out of loop
@@ -256,8 +229,7 @@ def process_trading_day(date):
                 entry_data = data[(data.index > entry_time) & (data.index <= end_time)] #start_time is entry_time now
 
                 #calculate stop loss for long or short
-                #stop_loss = calculate_stop_loss(entry_price, atr_value, position)
-                stop_loss = calculate_stop_loss(entry_price, atr_value, position) #new stop loss
+                stop_loss = calculate_stop_loss(entry_price, atr_value, position)
 
                 #highest_price = entry_price #+ (entry_price * 0.015) #for long, this is the highest price; for short, it's the lowest
 
@@ -317,8 +289,6 @@ def process_trading_day(date):
                     'closing_time': exit_time,
                     'closing_price': exit_price
                 })
-
-    #print(f"Time taken to run rest of the code and function after data is loaded: {time.time() - time_start}")
 
     return positions
 
