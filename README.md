@@ -20,7 +20,7 @@
 1. **Core Idea**: This is an Opening Range Breakout (ORB) strategy that selects the top 20 stocks each day based on predefined criteria such as minimum stock price, volume, RV, ATR, etc., which can be found in detail inside the code
 2. **Entry Rules**:
    - The strategy examines the first 6 candles (from 09:30 to 09:35)
-   - If 5 out of 6 candles are bullish, it enters a long position; otherwise, it enters a short position
+   - If 5 out of 6 candles are bullish, it enters a long position and if 1 or 0 candle are bearish it enters a short position
    - Additional conditions include entering a position only if the price is at least 0.25% below the previous close
 3. **Exit Rules**:
    - Positions are exited only at the end of trading hour unless the stop loss is hit
