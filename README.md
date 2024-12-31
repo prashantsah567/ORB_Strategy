@@ -46,7 +46,9 @@
    - **Max Drawdown**: 5%
 2. **Log Files**: Detailed logs of each trade, including capital allocation, stop loss, commissions, borrow fees, entry, and exit points, are saved in the `logs` folder.
 
-![Strategy Performance](chart.png)
+
+![Strategy Performance](images/chart.png)
+
 
 ---
 
