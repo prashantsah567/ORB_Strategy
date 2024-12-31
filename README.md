@@ -1,34 +1,68 @@
-# ORB_STRATEGY 
+# Opening Range Breakout (ORB) Strategy
 
-Warning:
-1. This startegy has only been tested for 2-year of intraday data and is not recommend to use for live trading unless you do your complete testing with vast data for a longer time range.
-2. The sample_data/historical_data_sample folder only have 5 sample data which is not enough to test this strategy. You need to download a lot more data, the data on which this backtesting is performed is in the sample_data/tickers.csv file. Obvsiouly you can have more data, remember the more data you have the better test it is.
-3. Also you need to put the historical data (which should be in .csv format) in a folder called historical_data_new just to comply with this repo
+## Warning
+1. **Testing Limitations**: This strategy has been tested on only 2 years of intraday data. It is not recommended for live trading unless you thoroughly test it and fully understand the code logic.
+2. **Sample Data**: The `sample_data/historical_data_sample` folder contains only two sample files, which are insufficient for meaningful testing. You need more extensive data. The backtesting in this repository is performed using the tickers listed in `sample_data/tickers.csv`. The more data you use, the better your testing results will be.
+3. **Historical Data Requirement**: To comply with this repository, place your historical data (in `.csv` format) in a folder named `historical_data_new`.
 
+---
 
-Notes:
-1. For entry we are using 1-min data but for exit we are using 5-min data to cut random noises
-2. You can easily modify the code or apply new rules, alot of them are tested there and commented out for future use
+## Notes
+1. **Entry and Exit**:
+   - Entry signals use 1-minute data.
+   - Exit signals use 5-minute data to reduce noise.
+2. **Customizability**: The code is flexible and allows you to modify or add new rules. Several alternative rules, such as a trailing stop loss, are already implemented and commented out for future use.
 
-1. Check for half day
+---
 
-1. Total Starting Capital -> $25,000 (only on first trading day, after that whatever it becomes either increases or decreases that would be considered as the new capital) 
-2. The toatal capital will be allocated equally among all the picked stocks for that day
-3. Commision rule -> $0.005/share (applied both when buying and selling)
-4. When taking short position-> Commission + borrow fee (0.5% for now)
-5. Now, first filter the stocks for the current trading day from the top_daily_stocks.csv file (you can store that into a list of tickers just for convinence and it will be updated each day), and after you get the tickers for the current day, you can get the data in the historical_data folder where each ticker data is stored in this format: ticker_1_min_data.csv
-6. Check from 9:30 to 9:35 (check if close price is higher than open price on each candle, so start from 9:31, 9:32, 9:33, 9:34 and 9:35 - at least 4 of them should be in 1 direction either going high or low to take decision)
-7. If the stock price from 9:30 to 9:35 remain higher in at least 4 of the candle (i.e. closing price higher than opening), we buy it (take long position) and if otherwise (means at least for 4 candles closing price is lower than opening) we take short position
-8. We also put a stop loss along with our order with 10% of ATR (so it will be both for short or long position)
-9. If the position is not stopped during the day (by 15:55 PM) close it at 15:56 PM
-10. Closing the position -> Either on stoploss or profit at eod 
-11. Also when you open a position or close a position, i want you to write the record in a file (don't create a new file for each trade, just one), mention: open/close a position at 'Stock Ticker' at price 'mention price here' at 'Time stamp'
+## Understanding the Strategy
+1. **Core Idea**: This is an Opening Range Breakout (ORB) strategy that selects the top 20 stocks each day based on predefined criteria.
+2. **Entry Rules**:
+   - The strategy examines the first 6 candles (from 09:30 to 09:35).
+   - If 5 out of 6 candles are bullish, it enters a long position; otherwise, it enters a short position.
+   - Additional conditions include entering a position only if the price is at least 0.25% below the previous day's close.
+3. **Custom Rules**: Additional filters and criteria are implemented in the code. Review the comments to explore these rules.
 
-other calculations:
-1. Alpha
-2. Beta
-3. Sharpe ratio
-4. Maximum Draw Down (MDD)
-5. Volatility
-6. Total Return in % and $
-7. Final Capital
+---
+
+## Implementation Details
+1. **Data Requirements**:
+   - The repository uses 2 years of intraday (1-minute) data for approximately 2,500 US stocks (listed in `sample_data/tickers.csv`).
+   - Data is preprocessed to:
+     - Retain only trading hours.
+     - Fill missing data.
+     - Calculate various indicators (e.g., ATR, Relative Volume).
+   - Preprocessed data is saved as Parquet files for faster processing.
+2. **Stock Selection**:
+   - Each day, up to 20 stocks are selected based on the defined criteria.
+   - These stocks are then used for entry and exit signals.
+
+---
+
+## Results
+1. **Performance Metrics**:
+   - **Total Return**: 102%
+   - **Sharpe Ratio**: 1.1
+   - **Max Drawdown**: 5%
+2. **Log Files**: Detailed logs of each trade, including capital allocation, stop loss, commissions, borrow fees, entry, and exit points, are saved in the `logs` folder.
+
+![Strategy Performance](chart.png)
+
+---
+
+## Steps to Run
+1. **Install Dependencies**:
+   Run the following command to install the required Python packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. **Execute Files in Order**:
+   - Follow the steps from 1 to 5 in sequential order as outlined in the repository.
+   - You may not need to run every file for each test; refer to the comments at the top of each file for specific instructions.
+
+---
+
+## Recommendations
+- **Data**: Use extensive historical data for better backtesting. The sample data provided in this repository is insufficient for proper testing.
+- **Customization**: Modify the code and test additional rules for improved performance.
+- **Caution**: Always validate the strategy thoroughly before considering live trading.

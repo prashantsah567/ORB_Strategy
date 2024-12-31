@@ -7,3 +7,5 @@ historical_data_new/
 processed_data_new/
 archive/
 __pycache__/
+logs/chart.py
+chart.png
