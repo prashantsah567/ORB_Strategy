@@ -1,6 +1,5 @@
 .DS_Store
 historical_data/
-logs/
 processed_data/
 top_daily_stocks.csv
 New_A.csv
@@ -8,3 +7,4 @@ historical_data_new/
 processed_data_new/
 archive/
 __pycache__/
+logs/chart.py

@@ -1,6 +1,6 @@
 '''
 This file only need to run once in the beginning or if new dataset are added in historical_data folder.
-Process all the data in the historical_data folder and store in Processed_data folder 
+It process all the data in the historical_data folder and store in Processed_data folder 
 '''
 
 import os

@@ -1,4 +1,4 @@
-'''This file has the core logic that applies to the candidate stocks from step-2'''
+'''This file has the core logic (buy/sell) that applies to the candidate stocks from step-2'''
 
 import pandas as pd # type: ignore
 from datetime import datetime
@@ -7,14 +7,13 @@ import time
 import pytz # type: ignore
 import shutil
 
-#constants
-TOP_STOCKS_FILE = './step-2-get_candidate_stocks/top_20_qualified_daily_stocks.csv'
+TOP_STOCKS_FILE = './step-2-get_candidate_stocks/top_20_qualified_daily_stocks.csv' #file from step-2
 PROCESSED_DATA_FOLDER = './processed_data_new'
 LOG_FILE = 'trade_log_initial.csv'
 STOP_LOSS_PERCENTAGE = 0.05 #5% of atr
-atr_value = 0.15 #fixed atr_value for now (so stop loss'll be atr_value * STOP_LOSS_PERCENTAGE = 0.15 * 0.05 = 0.0075)
-PERCENTAGE_CHANGE_BEFORE_ENTRY = 0.01
-#trail_percent = 0.02 # 2%
+atr_value = 0.15 #fixed atr_value used for calculating stop loss (so net stop loss will be atr_value * STOP_LOSS_PERCENTAGE = 0.15 * 0.05 = 0.0075 which is 0.75%)
+PERCENTAGE_CHANGE_BEFORE_ENTRY = 0.0025 #0.25% change before entry
+#trail_percent = 0.02 # 2% (can be used for trailing stop loss, not used in this script because of lower return)
 
 #helper function to get tickers for a given date
 def get_tickers_for_date(date):
@@ -24,7 +23,7 @@ def get_tickers_for_date(date):
 
     return tickers
 
-# load historical data for selected tickers (for .csv)
+# load historical data for selected tickers (for .csv) - if not willing to use parquet files
 '''
 def load_historical_data(tickers):
     data = {}
@@ -40,7 +39,7 @@ def load_historical_data(tickers):
     return data
 '''
 
-#new loading function based on processed parquet files
+# loading function based on processed parquet files
 def load_historical_data(tickers):
     data = {}
     for ticker in tickers:
@@ -56,7 +55,7 @@ def load_historical_data(tickers):
 
     return data
 
-#check price movement between 9:31 AM and 9:35 AM
+#check price movement between 09:30 and 09:35 and decide to go long or short
 def check_price_movement(data, date):
     # Define the US/Eastern timezone using pytz
     eastern = pytz.timezone('US/Eastern')
@@ -74,6 +73,7 @@ def check_price_movement(data, date):
     #count how many of the candles (from 09:30 to 09:35) had close > open
     positive_movement = sum(data_filtered['close'] > data_filtered['open'])
 
+    #if more than 5 candles had close > open, go long; if less than 1, go short else no trade
     if positive_movement >= 5:
         lowest_ob_price = data_filtered[['open', 'close']].min().min()
         return 'long', lowest_ob_price
@@ -90,7 +90,7 @@ def calculate_stop_loss(entry_price, atr, position_type):
     elif position_type == 'short':
         return entry_price + (entry_price * STOP_LOSS_PERCENTAGE * atr)
 
-#trailing stop loss calculation
+#trailing stop loss calculation (uncomment this function to use trailing stop loss)
 '''
 def update_trailing_stop_loss(current_price, highest_price, atr, trail_percent, position_type):
     if position_type == 'long':
@@ -130,11 +130,11 @@ def log_trade(action, ticker, price, entry_time, position_type):
 
 # main logic for a given trading day
 def process_trading_day(date):
-    #get tickers and ATR values for the selected day
+    #get tickers for the selected day
     tickers = get_tickers_for_date(date)
     print(f'Tickers for {date}: {tickers}')
 
-    #load historical 1-min data for the ticker
+    #load historical data for tickers on the selected day
     historical_data = load_historical_data(tickers)
 
     positions = [] #to store open positions for the day
@@ -145,9 +145,6 @@ def process_trading_day(date):
         position, ob_price = check_price_movement(data, date)
 
         if position != 'no_trade':
-            #start_time = pd.Timestamp(f"{date} 09:36:00-05:00")
-            #end_time = pd.Timestamp(f"{date} 15:56:00-05:00")
-
             # Define the US/Eastern timezone using pytz
             eastern = pytz.timezone('US/Eastern')
             # Construct the start and end times dynamically based on the date
@@ -156,6 +153,7 @@ def process_trading_day(date):
             #checking for half day
             half_days = ['2022-07-03', '2023-07-03', '2023-11-24', '2024-07-03']
 
+            #end time is fixed for all days (full or half), unless it hit the stop loss
             if date in half_days:
                 end_time = pd.Timestamp(f"{date} 12:55:00").tz_localize(eastern, ambiguous='NaT')
             else:
@@ -166,19 +164,15 @@ def process_trading_day(date):
 
             if entry_data.empty:
                 continue
-            
-            #regular entry price and time 09:35 (can change to 09:36 in line 154)
-            # entry_time = entry_data.index[0]
-            # entry_price = data.loc[entry_time,'close']
 
-            #this is the start time & price for the lookout of entry
+            #this is the time & price for the lookout of entry
             entry_time_init = entry_data.index[0]
             entry_price_init = data.loc[entry_time_init,'close']
 
             entry_time = None
             entry_price = None
 
-            #looking for entry as certain % changes after the entry_time_init & entry_price_init
+            #loop through the data to find the entry time that satisfy PERCENTAGE_CHANGE_BEFORE_ENTRY
             for timestamp, row in entry_data.iterrows():
                 current_price = row['close']
 
@@ -215,9 +209,10 @@ def process_trading_day(date):
             '''
 
             #incase there are multiple values at the entry_price, choose the first one
-            # if isinstance (entry_price, pd.Series):
-            #     entry_price = entry_price.iloc[0] #handle ambiguity
+            if isinstance (entry_price, pd.Series):
+                entry_price = entry_price.iloc[0] #handle ambiguity
             
+            '''if we want to use ATR (from processed data file) for stop loss calculation'''
             # atr_value = data.loc[entry_time, 'ATR_14']
             # if atr_value > 0.3: #max_atr value is 0.3 which would limit max stop loss to 3%
             #     atr_value = 0.3
@@ -225,13 +220,14 @@ def process_trading_day(date):
             #only go for any calculation or exit position if we entered a position
             if entry_price is not None:
                 
-                #so for the exit time, the timestamp need to start from the entry time (need to change the entry_data)
+                #for the exit time, the timestamp need to start from the entry time
                 entry_data = data[(data.index > entry_time) & (data.index <= end_time)] #start_time is entry_time now
 
                 #calculate stop loss for long or short
                 stop_loss = calculate_stop_loss(entry_price, atr_value, position)
 
-                #highest_price = entry_price #+ (entry_price * 0.015) #for long, this is the highest price; for short, it's the lowest
+                #for trailing stop loss (for long it's the highest price and for short it's the lowest price)
+                #highest_price = entry_price #+ (entry_price * 0.015) 
 
                 #log the opening of the trade
                 log_trade('open', ticker, entry_price, entry_time, position)
@@ -241,13 +237,14 @@ def process_trading_day(date):
                 exit_price = None
 
                 #start: for setting the check interval to 5-minutes ###############################################################
-                # entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
-                # '''there is a problem with this, basically it starting from 9:30 instead of next interval which should be 9:40 or so'''
-                # entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
+                #NOTE: this 5 minute check is only applied to exit the trade (if stop-loss hit) and not for entry
+                entry_data = entry_data.reset_index() # resetting the column to make timestamp a regular column
+                entry_data_resampled_for_5_min = entry_data.resample('5T', on='timestamp').agg({'close': 'last'}).dropna()
                 #end: for the 5-minute check code ###############################################################
 
-                #for timestamp, row in entry_data.iterrows(): (if want to switch to 1-min, just replace entry_data_resampled_for_5_min with entry_data)
-                for timestamp, row in entry_data.iterrows():
+                #for timestamp, row in entry_data.iterrows(): 
+                #NOTE: To switch to 1-min check for exit, just replace entry_data_resampled_for_5_min with entry_data
+                for timestamp, row in entry_data_resampled_for_5_min.iterrows():
                     current_price = row['close']
                     
                     if isinstance(current_price, pd.Series):
@@ -257,19 +254,17 @@ def process_trading_day(date):
                     # if (position == 'long' and current_price > highest_price) or (position == 'short' and current_price < highest_price) :
                     #     stop_loss, highest_price = update_trailing_stop_loss(current_price=current_price, highest_price=highest_price, atr=atr_value, trail_percent=trail_percent, position_type=position)
 
-                    '''this applies only for 5x timestamp'''
-                    #get the time part only from timestamp
-                    # time_part = timestamp.strftime('%H:%M:%S')
-                    # if time_part != '09:30:00':
-
-                    if position == 'long' and current_price < stop_loss:
-                        exit_time = timestamp
-                        exit_price = current_price
-                        break #stop-loss hit, exit trade
-                    elif position == 'short' and current_price > stop_loss:
-                        exit_time = timestamp
-                        exit_price = current_price
-                        break #stop-loss hit, exit trade
+                    '''this applies only for 5x timestamp; for 1-min interval, comment the next 2 lines'''
+                    time_part = timestamp.strftime('%H:%M:%S')
+                    if time_part != '09:30:00' or time_part != '09:35:00': #skip the first 2 timestamps as our start time is 09:36
+                        if position == 'long' and current_price < stop_loss:
+                            exit_time = timestamp
+                            exit_price = current_price
+                            break #stop-loss hit, exit trade
+                        elif position == 'short' and current_price > stop_loss:
+                            exit_time = timestamp
+                            exit_price = current_price
+                            break #stop-loss hit, exit trade
 
                 #if stop-loss wasn't hit, close at EOD
                 if exit_time is None:
@@ -314,7 +309,6 @@ if __name__ == "__main__":
         trading_date_str = trading_date.strftime('%Y-%m-%d')
         positions = process_trading_day(trading_date_str)
 
-# Example usage - for quick test on a certain date
-
+# for test on a certain date
 # if __name__ == "__main__":
 #     positions = process_trading_day('2023-07-03')
