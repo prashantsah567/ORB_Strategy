@@ -1,11 +1,11 @@
-'''Process all the data in processed_data folder to get the top trading stocks on each day based on set conditions'''
+'''Process all the parquet files in processed_data folder to get the top trading stocks on each day based on defined conditions'''
 
 import os
 import pandas as pd # type: ignore
 from datetime import datetime
 import pytz # type: ignore
 
-#1 - constants
+#conditions for filtering stocks
 MIN_OPEN_PRICE = 5.0
 MIN_AVG_VOLUME = 10000 
 MIN_ATR = 0.5
@@ -17,7 +17,7 @@ data_folder = './processed_data_new'
 start_time = '09:30:00'
 end_time = '09:35:00' #end time is 9:35, so that we only choose those stocks which fits our criteria in the first 5 mins
 start_date = '2022-11-30' #date that fits all dataset after calculating all the indicatros ATR, 14_day_avg and Relative Volume
-end_date = '2024-11-27'
+end_date = '2024-11-27' #end date for our dataset
 
 #load and filter data
 def load_filtered_data(file_path):
@@ -26,10 +26,6 @@ def load_filtered_data(file_path):
     #for .parquet file and since 'timestamp' is a index and not a regular columns
     df = pd.read_parquet(file_path)
     df['timestamp'] = df.index
-
-    #convert start and end timestamp with date and time to timestamp object
-    # start_timestamp = pd.Timestamp(f"{start_date} 09:30:00-05:00")
-    # end_timestamp = pd.Timestamp(f"{end_date} 09:35:00-05:00") 
     
     # Define start and end timestamps dynamically in 'America/New_York'
     eastern = pytz.timezone('America/New_York')
@@ -84,7 +80,7 @@ def find_top_stocks(data_folder):
     
     return top_daily_stocks
 
-#run the top stocks finder and save the result in top_20_qualified_daily_stocks.csv file
+#run the find_top_stocks and save the result in top_20_qualified_daily_stocks.csv file
 top_stocks = find_top_stocks(data_folder)
 print(f"The final result of top stocks------------------------{top_stocks.shape}---------------------------------")
 

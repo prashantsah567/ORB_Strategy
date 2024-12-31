@@ -1,5 +1,17 @@
 # ORB_STRATEGY 
 
+Warning:
+1. This startegy has only been tested for 2-year of intraday data and is not recommend to use for live trading unless you do your complete testing with vast data for a longer time range.
+2. The sample_data/historical_data_sample folder only have 5 sample data which is not enough to test this strategy. You need to download a lot more data, the data on which this backtesting is performed is in the sample_data/tickers.csv file. Obvsiouly you can have more data, remember the more data you have the better test it is.
+3. Also you need to put the historical data (which should be in .csv format) in a folder called historical_data_new just to comply with this repo
+
+
+Notes:
+1. For entry we are using 1-min data but for exit we are using 5-min data to cut random noises
+2. You can easily modify the code or apply new rules, alot of them are tested there and commented out for future use
+
+1. Check for half day
+
 1. Total Starting Capital -> $25,000 (only on first trading day, after that whatever it becomes either increases or decreases that would be considered as the new capital) 
 2. The toatal capital will be allocated equally among all the picked stocks for that day
 3. Commision rule -> $0.005/share (applied both when buying and selling)

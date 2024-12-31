@@ -1,11 +1,13 @@
+'''This script calculates the final metrics with trade details based on the trade log file generated in the previous step.'''
+
 import pandas as pd  # type: ignore
 import numpy as np # type: ignore
 import os
 import pytz # type: ignore
 
 # File paths
-log_file = "logs/trade_log_initial.csv"  # Path to trade log file which will be used for trade calculation
-metrics_output_file = "logs/final_metrics.csv"  # Path to save final results
+log_file = "logs/trade_log_initial.csv"  #Path to trade log file which will be used for trade calculation
+metrics_output_file = "logs/final_metrics.csv"  #Path to save final results
 trade_details_file = "logs/trade_details.csv" #file for detailed trade logs
 
 #delete the previously generated log file (trade_details); final_metrics file replaces its value so no need to delete
@@ -15,7 +17,7 @@ if os.path.exists(trade_details_file):
 # Initialize variables
 starting_capital = 100000
 capital = starting_capital
-risk_free_rate = 0.03  # Example risk-free rate (adjust if needed)
+risk_free_rate = 0.03  # risk-free rate for sharpe ratio calculation (adjust if needed)
 daily_returns = []  # To track daily returns
 current_date = None
 metrics = {
@@ -49,7 +51,7 @@ for date, daily_data in log_df.groupby('date'):
     # Get unique tickers for the day
     unique_tickers = daily_data['ticker'].unique()
 
-    # Capital allocation for the day
+    # Capital allocation for the day (equally weighted)
     capital_per_stock = capital / len(unique_tickers) if len(unique_tickers) > 0 else 0
 
     # Track day-level returns
@@ -123,16 +125,16 @@ total_percent_return = round(((capital - starting_capital) / starting_capital) *
 print(f"Total % Return =  {total_percent_return}")
 df = pd.read_csv('logs/trade_details.csv') #read the trade details file for return based on position type (long and short)
 result = df.groupby('position_type')['% of profit/loss'].agg(['sum', 'count']).reset_index()
-result.columns = ['position_type', '%_return', 'Num_of_Trades'] #rename the columns for readability 
+result.columns = ['position_type', '%_return(not actual, just sum)', 'Num_of_Trades'] #rename the columns for readability 
 print(result)
 
 #extract values from result
-long_return = round(result.loc[result['position_type'] == 'long', '%_return'].values[0],2)
-short_return = round(result.loc[result['position_type'] == 'short', '%_return'].values[0],2)
+long_return = round(result.loc[result['position_type'] == 'long', '%_return(not actual, just sum)'].values[0],2)
+short_return = round(result.loc[result['position_type'] == 'short', '%_return(not actual, just sum)'].values[0],2)
 long_trades = result.loc[result['position_type'] == 'long', 'Num_of_Trades'].values[0]
 short_trades = result.loc[result['position_type'] == 'short', 'Num_of_Trades'].values[0]
 
-#append the final result to a .csv file (for testing) #######################################################
+#append the final result to a test_result.csv file (for testing - by comparing with previous results) #######################################################
 import sys
 sys.path.append('./step-3-run_strategy')
 from orb_stat_main import STOP_LOSS_PERCENTAGE, atr_value, PERCENTAGE_CHANGE_BEFORE_ENTRY # type: ignore
