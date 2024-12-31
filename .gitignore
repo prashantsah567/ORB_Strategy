@@ -8,3 +8,4 @@ processed_data_new/
 archive/
 __pycache__/
 logs/chart.py
+logs/trade_result_calc.py
